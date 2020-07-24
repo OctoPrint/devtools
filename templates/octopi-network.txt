@@ -1,0 +1,3 @@
+iface wlan0-octopi inet manual
+    wpa-ssid "{{ ssid }}"
+    wpa-psk "{{ psk }}"

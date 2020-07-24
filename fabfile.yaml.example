@@ -1,0 +1,29 @@
+password: <rpi password>
+
+wifi_ssid: <ssid>
+wifi_psk: <password>
+
+github_token: <github token>
+releasetest_repo: https://<owner>:<token>@github.com/<owner>/<repo>
+
+octoprint: /path/to/OctoPrintCheckout
+
+python27: /path/to/python2.7
+python37: /path/to/python3.7
+
+flashhost:
+  mounts: /path/to/mountdir
+  images: /path/to/imagedir
+  usbsdmux: /path/to/usbsdmux
+  ykush: /path/to/ykushcmd
+
+targets:
+  example:
+    # serial id of USB-SD-MUX
+    serial: "123"
+
+    # port number on YKUSH USB hub
+    usbport: 1
+
+    # hostname to assign
+    hostname: example
