@@ -265,6 +265,17 @@ def flashhost_dut(target):
 	sudo("{} /dev/usb-sd-mux/id-{} dut".format(env.flashhost["usbsdmux"], format_serial(serial)))
 	sudo("{} -u {}".format(env.flashhost["ykush"], usbport))
 
+@hosts('pi@flashhost.lan')
+def flashhost_reboot(target):
+	# powers target off and on again
+	if not target in env.targets:
+		abort("Unknown target: {}".format(target))
+	usbport = env.targets[target]["usbport"]
+	
+	sudo("{} -d {}".format(env.flashhost["ykush"], usbport))
+	time.sleep(1.0)
+	sudo("{} -u {}".format(env.flashhost["ykush"], usbport))
+
 @hosts('pi@flashhost')
 def flashhost_flash_and_provision(target, version):
 	# runs flash & provision cycle on target for specified OctoPi version

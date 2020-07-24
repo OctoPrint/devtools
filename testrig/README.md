@@ -14,6 +14,7 @@ All to be cut out off 3mm thick Plywood. A3 size should suffice.
   * power-mount.svg
   * tray-controller.svg
   * 2 x tray-pi-and-sdmux.svg
+  * optional: tray-fan.svg
 
 ### Electronics
 
@@ -24,6 +25,8 @@ All to be cut out off 3mm thick Plywood. A3 size should suffice.
   * USB C power supply 5.1V/3A
   * 2 x RPi 2/3/4 as test Pis
   * RPi4 4GB as controller
+  * passive heatsink for RPi4
+  * optional: Noctua 40x10mm 5V fan for RPi4
 
 ### Cables
 
@@ -35,4 +38,5 @@ All to be cut out off 3mm thick Plywood. A3 size should suffice.
   * 12 x M2.5x6mm standoff
   * 4 x M3x6mm standoff
   * 4 x M3x20mm standoff
+    * 8 x M3x20mm if cooling fan for Pi4 is to be mounted
   * various M2.5 and M3 nuts and bolts
