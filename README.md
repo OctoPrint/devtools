@@ -29,3 +29,7 @@ Release channel maintenance, start version 1.4.1rc2, fake release 1.4.1rc3
 ### Combined
 
     fab -H pi@octopi3.lan flashhost_flash_and_provision:pi3,0.17.0 octopi_test_update_maintenance:maintenance,1.4.1rc3,version=1.4.1rc2
+
+## Testrig
+
+Testrig files available in `./testrig`.
