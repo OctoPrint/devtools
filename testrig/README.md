@@ -8,6 +8,8 @@ Testrig with two test Pis and one Pi4 as controller.
 
 ### Lasercut parts
 
+All to be cut out off 3mm thick Plywood. A3 size should suffice.
+
   * bottom-plate.svg
   * power-mount.svg
   * tray-controller.svg
