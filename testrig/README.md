@@ -1,6 +1,6 @@
 # Testrig
 
-Testrig with two test Pis and one Pi4 as controller.
+Testrig with two test Pis (2, 3 or 4) and one Pi4 as controller.
 
 ![](testrig.jpg)
 
@@ -15,6 +15,10 @@ All to be cut out off 3mm thick Plywood. A3 size should suffice.
   * tray-controller.svg
   * 2 x tray-pi-and-sdmux.svg
   * optional: tray-fan.svg
+
+### 3D printed parts
+
+  * 2 x standoff-sdmux.stl
 
 ### Electronics
 
