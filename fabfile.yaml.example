@@ -1,3 +1,4 @@
+user: <rpi user>
 password: <rpi password>
 
 wifi_ssid: <ssid>

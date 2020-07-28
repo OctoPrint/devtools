@@ -18,17 +18,23 @@ Provided as-is for documentationational purposes.
 
 Target pi3, OctoPi 0.17.0
 
-    fab flashhost_flash_and_provision:pi3,0.17.0
+    fab flashhost_flash_and_provision:0.17.0,pi3
+
+or
+
+    fab --set target=pi3 flashhost_flash_and_provision:0.17.0
 
 ### Test update for maintenance RC
 
-Release channel maintenance, start version 1.4.1rc2, fake release 1.4.1rc3
+Target pi3, release channel maintenance, start version 1.4.1rc2, fake release 1.4.1rc3
 
-    fab -H pi@octopi3.lan octopi_test_update_maintenance:maintenance,1.4.1rc3,version=1.4.1rc2
+    fab --set target=pi3 octopi_test_update_maintenance:maintenance,1.4.1rc3,version=1.4.1rc2
 
 ### Combined
 
-    fab -H pi@octopi3.lan flashhost_flash_and_provision:pi3,0.17.0 octopi_test_update_maintenance:maintenance,1.4.1rc3,version=1.4.1rc2
+Target pi3, OctoPi 0.17.0, release channel maintenance, start version 1.4.1rc2, fake release 1.4.1rc3
+
+    fab --set target=pi3 flashhost_flash_and_provision:0.17.0 octopi_test_update_maintenance:maintenance,1.4.1rc3,version=1.4.1rc2
 
 ## Testrig
 

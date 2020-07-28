@@ -1,6 +1,6 @@
 from __future__ import print_function, unicode_literals, absolute_import
 
-from fabric.api import local, lcd, run, sudo, cd, prompt, get, put, hosts
+from fabric.api import local, lcd, run, sudo, cd, prompt, get, put, hosts, settings
 from fabric.utils import abort
 from fabric.state import env
 from fabric.contrib import files
@@ -182,10 +182,12 @@ def boot_part_device(serial):
 	return "/dev/disk/by-id/usb-LinuxAut_sdmux_HS-SD_MMC_{}-0:0-part1".format(format_serial(serial))
 
 @hosts('pi@flashhost.lan')
-def flashhost_flash(target, version):
+def flashhost_flash(version, target=None):
 	# flashes target with OctoPi image of provided version using dd
 	imagefile = "{}/octopi-{}.img".format(env.flashhost["images"], version)
 
+	if target is None:
+		target = env.target
 	if not target in env.targets:
 		abort("Unknown target: {}".format(target))
 	if not files.exists(imagefile):
@@ -196,8 +198,10 @@ def flashhost_flash(target, version):
 	sudo("dd bs=4M if={} of={} status=progress conv=fsync".format(imagefile, targetdev))
 
 @hosts('pi@flashhost.lan')
-def flashhost_provision(target):
+def flashhost_provision(target=None):
 	# provisions target with wifi, hostname and password
+	if target is None:
+		target = env.target
 	if not target in env.targets:
 		abort("Unknown target: {}".format(target))
 	serial = env.targets[target]["serial"]
@@ -244,8 +248,10 @@ def flashhost_provision(target):
 	sudo("umount {}".format(mount))
 
 @hosts('pi@flashhost.lan')
-def flashhost_host(target):
+def flashhost_host(target=None):
 	# switches target to Host mode (powered off & USB-SD-MUX Host)
+	if target is None:
+		target = env.target
 	if not target in env.targets:
 		abort("Unknown target: {}".format(target))
 	usbport = env.targets[target]["usbport"]
@@ -255,8 +261,10 @@ def flashhost_host(target):
 	sudo("{} /dev/usb-sd-mux/id-{} host".format(env.flashhost["usbsdmux"], format_serial(serial)))
 
 @hosts('pi@flashhost.lan')
-def flashhost_dut(target):
+def flashhost_dut(target=None):
 	# switches target to DUT mode (USB-SD-MUX DUT & powered on)
+	if target is None:
+		target = env.target
 	if not target in env.targets:
 		abort("Unknown target: {}".format(target))
 	usbport = env.targets[target]["usbport"]
@@ -266,8 +274,10 @@ def flashhost_dut(target):
 	sudo("{} -u {}".format(env.flashhost["ykush"], usbport))
 
 @hosts('pi@flashhost.lan')
-def flashhost_reboot(target):
+def flashhost_reboot(target=None):
 	# powers target off and on again
+	if target is None:
+		target = env.target
 	if not target in env.targets:
 		abort("Unknown target: {}".format(target))
 	usbport = env.targets[target]["usbport"]
@@ -277,15 +287,17 @@ def flashhost_reboot(target):
 	sudo("{} -u {}".format(env.flashhost["ykush"], usbport))
 
 @hosts('pi@flashhost')
-def flashhost_flash_and_provision(target, version):
+def flashhost_flash_and_provision(version, target=None):
 	# runs flash & provision cycle on target for specified OctoPi version
-	flashhost_host(target)
-	flashhost_flash(target, version)
+	if target is None:
+		target = env.target
+	flashhost_host(target=target)
+	flashhost_flash(version, target=target)
 	print("Flashing done, giving the system a bit to recover...")
 	time.sleep(5.0)
 	print("... done")
-	flashhost_provision(target)
-	flashhost_dut(target)
+	flashhost_provision(target=target)
+	flashhost_dut(target=target)
 
 ##~~ OctoPi ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -420,39 +432,61 @@ def octopi_provision(config, version, release_channel=None, restart=True):
 		octopi_octoservice("restart")
 		octopi_tailoctolog()
 
-def octopi_test_simplecheckout(branch):
-	# tests simple checkout of branch
-	octopi_releasetestrepo()
-	octopi_checkout(branch)
-
-def octopi_test_simplepip(tag):
+def octopi_test_simplepip(tag, target=None):
 	# tests simple pip install of tag
-	octopi_await_server()
-	url = "{}/archive/{}.zip".format(env.releasetest_repo, tag)
-	octopi_install(url)
-	octopi_octoservice("restart")
-	octopi_tailoctolog()
+	if target is None:
+		target = env.target
 
-def octopi_test_update(version, channel, tag, branch, prerelease, config):
+	host_string = env.host_string
+	host = env.host
+	if target:
+		if not target in env.targets:
+			abort("Unknown target: {}".format(target))
+		host = "{}.lan".format(env.targets[target]["hostname"])
+		host_string = "{}@{}".format(env.user, host)
+
+	with settings(host_string=host_string, host=host):
+		octopi_await_server()
+		url = "{}/archive/{}.zip".format(env.releasetest_repo, tag)
+		octopi_install(url)
+		octopi_octoservice("restart")
+
+		octopi_await_server()
+		webbrowser.open("http://{}".format(env.host))
+		octopi_tailoctolog()
+
+def octopi_test_update(version, channel, tag, branch, prerelease, config, target):
 	# generic update test prep: wait for server, provision, apply
 	# release patch, restart, open browser and tail log
-	octopi_await_server()
-	octopi_provision(config, version, release_channel=channel, restart=False)
-	octopi_test_releasepatch(tag, branch, prerelease)
-	octopi_octoservice("restart")
+	if target is None:
+		target = env.target
 
-	octopi_await_server()
-	webbrowser.open("http://{}".format(env.host))
-	octopi_tailoctolog()
+	host_string = env.host_string
+	host = env.host
+	if target:
+		if not target in env.targets:
+			abort("Unknown target: {}".format(target))
+		host = "{}.lan".format(env.targets[target]["hostname"])
+		host_string = "{}@{}".format(env.user, host)
 
-def octopi_test_update_devel(channel, tag, version=None, config="configs/with_acl"):
+	with settings(host_string=host_string, host=host):
+		octopi_await_server()
+		octopi_provision(config, version, release_channel=channel, restart=False)
+		octopi_test_releasepatch(tag, branch, prerelease)
+		octopi_octoservice("restart")
+
+		octopi_await_server()
+		webbrowser.open("http://{}".format(env.host))
+		octopi_tailoctolog()
+
+def octopi_test_update_devel(channel, tag, version=None, config="configs/with_acl", target=None):
 	# tests update procedure for devel RCs
-	octopi_test_update(version, channel, tag, "rc/devel", True, config)
+	octopi_test_update(version, channel, tag, "rc/devel", True, config, target)
 
-def octopi_test_update_maintenance(channel, tag, version=None, config="configs/with_acl"):
+def octopi_test_update_maintenance(channel, tag, version=None, config="configs/with_acl", target=None):
 	# tests update procedure for maintenance RCs
-	octopi_test_update(version, channel, tag, "rc/maintenance", True, config)
+	octopi_test_update(version, channel, tag, "rc/maintenance", True, config, target)
 
-def octopi_test_update_stable(channel, tag, version=None, config="configs/with_acl"):
+def octopi_test_update_stable(channel, tag, version=None, config="configs/with_acl", target=None):
 	# tests update procedure for stable releases
-	octopi_test_update(version, channel, tag, "master", False, config)
+	octopi_test_update(version, channel, tag, "master", False, config, target)
