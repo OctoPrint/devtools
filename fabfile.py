@@ -33,6 +33,9 @@ env_from_yaml("./fabfile.yaml")
 env.disable_known_hosts = True
 env.no_keys = True
 
+env.target = os.environ.get("TARGET", None)
+env.tag = os.environ.get("TAG", None)
+
 def dict_merge(a, b, leaf_merger=None):
 	"""
 	Recursively deep-merges two dictionaries.
@@ -432,8 +435,14 @@ def octopi_provision(config, version, release_channel=None, restart=True):
 		octopi_octoservice("restart")
 		octopi_tailoctolog()
 
-def octopi_test_simplepip(tag, target=None):
+def octopi_test_simplepip(tag=None, target=None):
 	# tests simple pip install of tag
+	if tag is None:
+		tag = env.tag
+
+	if tag is None:
+		abort("Tag needs to be set")
+
 	if target is None:
 		target = env.target
 
@@ -458,6 +467,12 @@ def octopi_test_simplepip(tag, target=None):
 def octopi_test_update(version, channel, tag, branch, prerelease, config, target):
 	# generic update test prep: wait for server, provision, apply
 	# release patch, restart, open browser and tail log
+	if tag is None:
+		tag = env.tag
+
+	if tag is None:
+		abort("Tag needs to be set")
+
 	if target is None:
 		target = env.target
 
@@ -479,14 +494,14 @@ def octopi_test_update(version, channel, tag, branch, prerelease, config, target
 		webbrowser.open("http://{}".format(env.host))
 		octopi_tailoctolog()
 
-def octopi_test_update_devel(channel, tag, version=None, config="configs/with_acl", target=None):
+def octopi_test_update_devel(channel, tag=None, version=None, config="configs/with_acl", target=None):
 	# tests update procedure for devel RCs
 	octopi_test_update(version, channel, tag, "rc/devel", True, config, target)
 
-def octopi_test_update_maintenance(channel, tag, version=None, config="configs/with_acl", target=None):
+def octopi_test_update_maintenance(channel, tag=None, version=None, config="configs/with_acl", target=None):
 	# tests update procedure for maintenance RCs
 	octopi_test_update(version, channel, tag, "rc/maintenance", True, config, target)
 
-def octopi_test_update_stable(channel, tag, version=None, config="configs/with_acl", target=None):
+def octopi_test_update_stable(channel, tag=None, version=None, config="configs/with_acl", target=None):
 	# tests update procedure for stable releases
 	octopi_test_update(version, channel, tag, "master", False, config, target)
