@@ -14,7 +14,6 @@ import yaml
 import time
 import requests
 import webbrowser
-import contextlib
 import datetime
 
 from io import StringIO, BytesIO
@@ -189,11 +188,12 @@ def boot_part_device(serial):
 @hosts('pi@flashhost.lan')
 def flashhost_release_lock():
 	lock = env.flashhost["flashlock"]
-	run("rm -rf {}".format(lock))
+	sudo("rm -rf {}".format(lock))
 
 @hosts('pi@flashhost.lan')
 def flashhost_flash(version, target=None):
 	# flashes target with OctoPi image of provided version using dd
+	lockfile = env.flashhost["flashlock"]
 	imagefile = "{}/octopi-{}.img".format(env.flashhost["images"], version)
 
 	if target is None:
@@ -205,31 +205,7 @@ def flashhost_flash(version, target=None):
 	serial = env.targets[target]["serial"]
 	targetdev = disk_device(serial)
 
-	@contextlib.contextmanager
-	def flashlock(timeout=300):
-		lock = env.flashhost["flashlock"]
-		start = time.monotonic()
-		print("Acquiring {}...".format(lock))
-
-		while True:
-			if not files.exists(lock):
-				break
-
-			if timeout is not None and time.monotonic() > start + timeout:
-				abort("Could not obtain flash lock {} within {}s".format(lock, timeout))
-
-			time.sleep(10.0)
-
-		try:
-			run("touch {}".format(lock))
-			print("... flash lock acquired")
-			yield
-		finally:
-			run("rm -rf {}".format(lock))
-			print("... flash lock released")
-
-	with flashlock():
-		sudo("dd bs=4M if={} of={} status=progress conv=fsync".format(imagefile, targetdev))
+	sudo("flock -w300 {} dd bs=4M if={} of={} status=progress conv=fsync".format(lockfile, imagefile, targetdev))
 
 @hosts('pi@flashhost.lan')
 def flashhost_provision(target=None):
