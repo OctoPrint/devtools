@@ -92,39 +92,46 @@ def sync_test_repo(force=False):
 			else:
 				local("git push releasetest {}".format(branch))
 
-def test_rc_devel(tag, force=False):
+def test_rc_devel(tag=None, force=False):
 	# prep devel rc on testrepo
+	if tag is None:
+		tag = env.tag
+
+	if tag is None:
+		abort("Tag needs to be set")
+
 	if tag.endswith("rc1"):
 		merge_tag_push_test_repo("rc/devel", "devel", tag, force=force)
 	else:
 		merge_tag_push_test_repo("rc/devel", "staging/devel", tag, force=force)
 
-def test_rc_maintenance(tag, force=False):
+def test_rc_maintenance(tag=None, force=False):
 	# prep maintenance rc on testrepo
+	if tag is None:
+		tag = env.tag
+
+	if tag is None:
+		abort("Tag needs to be set")
+
 	if tag.endswith("rc1"):
 		merge_tag_push_test_repo("rc/maintenance", "maintenance", tag, force=force)
 	else:
 		merge_tag_push_test_repo("rc/maintenance", "staging/maintenance", tag, force=force)
 
-def test_stable(tag, force=False):
+def test_stable(tag=None, force=False):
 	# prep stable release on testrepo
 	test_rc_maintenance(tag, force=force)
 	merge_push_test_repo("master", "rc/maintenance")
 	merge_push_test_repo("rc/devel", "rc/maintenance")
 
-def tag_push_test_repo(push_branch, tag, force=False):
-	# push src and tags to test repo
-	with lcd(env.octoprint):
-		local("git checkout {}".format(push_branch))
-
-		if force:
-			local("git tag -d {}".format(tag))
-		local("git tag {}".format(tag))
-
-		local("git push --tags releasetest {}".format(tag))
-
-def merge_tag_push_test_repo(push_branch, merge_branch, tag, force=False):
+def merge_tag_push_test_repo(push_branch, merge_branch, tag=None, force=False):
 	# merge, tag and push to testrepo
+	if tag is None:
+		tag = env.tag
+
+	if tag is None:
+		abort("Tag needs to be set")
+
 	with lcd(env.octoprint):
 		local("git checkout {}".format(push_branch))
 		local("git merge {}".format(merge_branch))
@@ -146,13 +153,25 @@ def merge_push_test_repo(push_branch, merge_branch):
 
 ##~~ Local install testing ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+def venv_executable(venv, executable):
+	if sys.platform == "win32":
+		return "{}\\Scripts\\{}.exe".format(venv, executable)
+	else:
+		return "{}/bin/{}".format(venv, executable)
+
 def test_install(tag, python, target="wheel"):
 	# test local install of tag against python version and wheel/sdist
+	if tag is None:
+		tag = env.tag
+
+	if tag is None:
+		abort("Tag needs to be set")
+
 	basedir = "testconf-dist"
 	venv = "venv-dist"
 
 	with lcd(env.octoprint):
-		if not os.path.exists("dist\\OctoPrint-{}.tar.gz".format(tag)):
+		if not os.path.exists(os.path.join("dist", "OctoPrint-{}.tar.gz".format(tag))):
 			local("{} setup.py sdist bdist_wheel".format(sys.executable))
 		
 		local("rm -rf {} || true".format(venv))
@@ -160,17 +179,17 @@ def test_install(tag, python, target="wheel"):
 
 		local("{} -m virtualenv --python={} {}".format(env.python37, getattr(env, python), venv))
 		if target == "wheel":
-			local("{}\\Scripts\\python.exe -m pip install dist/OctoPrint-{}-py2.py3-none-any.whl".format(venv, tag))
+			local("{} -m pip install dist/OctoPrint-{}-py2.py3-none-any.whl".format(venv_executable(venv, "python"), tag))
 		elif target == "sdist":
-			local("{}\\Scripts\\python.exe -m pip install dist/OctoPrint-{}.tar.gz".format(venv, tag))
+			local("{} -m pip install dist/OctoPrint-{}.tar.gz".format(venv_executable(venv, "python"), tag))
 
-		local("{}\\Scripts\\octoprint.exe serve --debug --basedir {} --port 5001".format(venv, basedir))
+		local("{} serve --debug --basedir {} --port 5001".format(venv_executable(venv, "octoprint"), basedir))
 
-def test_sdist(tag, python):
+def test_sdist(python, tag=None):
 	# test sdist install of tag against python version
 	test_install(tag, python, target="sdist")
 
-def test_wheel(tag, python):
+def test_wheel(python, tag=None):
 	# test wheel install of tag against python version
 	test_install(tag, python, target="wheel")
 

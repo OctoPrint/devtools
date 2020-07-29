@@ -24,17 +24,32 @@ or
 
     fab --set target=pi3 flashhost_flash_and_provision:0.17.0
 
+or
+
+    export TARGET=pi3
+    fab flashhost_flash_and_provision:0.17.0
+
 ### Test update for maintenance RC
 
 Target pi3, release channel maintenance, start version 1.4.1rc2, fake release 1.4.1rc3
 
     fab --set target=pi3 octopi_test_update_maintenance:maintenance,1.4.1rc3,version=1.4.1rc2
 
+or
+
+    export TARGET=pi3
+    export TAG=1.4.1rc3
+    fab octopi_test_update_maintenance:maintenance,version=1.4.1rc2
+
 ### Combined
 
 Target pi3, OctoPi 0.17.0, release channel maintenance, start version 1.4.1rc2, fake release 1.4.1rc3
 
-    fab --set target=pi3 flashhost_flash_and_provision:0.17.0 octopi_test_update_maintenance:maintenance,1.4.1rc3,version=1.4.1rc2
+    export TARGET=pi3
+    export TAG=1.4.1rc3
+    fab flashhost_flash_and_provision:0.17.0 octopi_test_update_maintenance:maintenance,version=1.4.1rc2
+
+It is recommended to create two terminals, one for each DUT, and set `TARGET` and `TAG` in both correspondingly.
 
 ## Testrig
 
