@@ -25,7 +25,7 @@ or (with `TAG` set)
 
 or (with `TAG` set)
 
-    fab test_wheel:python3.7,1.4.1rc3
+    fab test_wheel:python3.7
 
 ### Flash & provision one of the test pis
 
