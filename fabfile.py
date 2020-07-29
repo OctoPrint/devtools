@@ -14,6 +14,8 @@ import yaml
 import time
 import requests
 import webbrowser
+import contextlib
+import datetime
 
 from io import StringIO, BytesIO
 
@@ -386,7 +388,27 @@ def octopi_update_config(config):
 	fd.close()
 	run("cat .octoprint/config.yaml")
 
-def octopi_await_server(timeout=None):
+def octopi_await_ntp(timeout=300):
+	# waits for the server to have ntp synchronized
+	start = time.monotonic()
+	print("Waiting for OctoPi to have its time and date synced from NTP")
+	while True:
+		if timeout is not None and time.monotonic() > start + timeout:
+			abort("Time was not synced after {}s".format(timeout))
+		
+		try:
+			remote = run("date +\"%Y%m%d\"").strip()
+		except:
+			pass
+		else:
+			local = datetime.date.today().strftime("%Y%m%d")
+			if remote == local:
+				print("Time has been synced")
+				break
+
+		time.sleep(10.0)
+
+def octopi_await_server(timeout=300):
 	# waits for the server to come up, with optional timeout
 	start = time.monotonic()
 	print("Waiting for OctoPrint to become responsive at http://{}".format(env.host))
@@ -455,7 +477,7 @@ def octopi_test_simplepip(tag=None, target=None):
 		host_string = "{}@{}".format(env.user, host)
 
 	with settings(host_string=host_string, host=host):
-		octopi_await_server()
+		octopi_await_ntp()
 		url = "{}/archive/{}.zip".format(env.releasetest_repo, tag)
 		octopi_install(url)
 		octopi_octoservice("restart")
@@ -485,7 +507,7 @@ def octopi_test_update(version, channel, tag, branch, prerelease, config, target
 		host_string = "{}@{}".format(env.user, host)
 
 	with settings(host_string=host_string, host=host):
-		octopi_await_server()
+		octopi_await_ntp()
 		octopi_provision(config, version, release_channel=channel, restart=False)
 		octopi_test_releasepatch(tag, branch, prerelease)
 		octopi_octoservice("restart")
