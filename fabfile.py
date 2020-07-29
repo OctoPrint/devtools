@@ -187,6 +187,11 @@ def boot_part_device(serial):
 	return "/dev/disk/by-id/usb-LinuxAut_sdmux_HS-SD_MMC_{}-0:0-part1".format(format_serial(serial))
 
 @hosts('pi@flashhost.lan')
+def flashhost_release_lock():
+	lock = env.flashhost["flashlock"]
+	run("rm -rf {}".format(lock))
+
+@hosts('pi@flashhost.lan')
 def flashhost_flash(version, target=None):
 	# flashes target with OctoPi image of provided version using dd
 	imagefile = "{}/octopi-{}.img".format(env.flashhost["images"], version)
@@ -200,7 +205,31 @@ def flashhost_flash(version, target=None):
 	serial = env.targets[target]["serial"]
 	targetdev = disk_device(serial)
 
-	sudo("dd bs=4M if={} of={} status=progress conv=fsync".format(imagefile, targetdev))
+	@contextlib.contextmanager
+	def flashlock(timeout=300):
+		lock = env.flashhost["flashlock"]
+		start = time.monotonic()
+		print("Acquiring {}...".format(lock))
+
+		while True:
+			if not files.exists(lock):
+				break
+
+			if timeout is not None and time.monotonic() > start + timeout:
+				abort("Could not obtain flash lock {} within {}s".format(lock, timeout))
+
+			time.sleep(10.0)
+
+		try:
+			run("touch {}".format(lock))
+			print("... flash lock acquired")
+			yield
+		finally:
+			run("rm -rf {}".format(lock))
+			print("... flash lock released")
+
+	with flashlock():
+		sudo("dd bs=4M if={} of={} status=progress conv=fsync".format(imagefile, targetdev))
 
 @hosts('pi@flashhost.lan')
 def flashhost_provision(target=None):

@@ -16,6 +16,7 @@ flashhost:
   images: /path/to/imagedir
   usbsdmux: /path/to/usbsdmux
   ykush: /path/to/ykushcmd
+  flashlock: /path/to/flash.lock
 
 targets:
   example:
