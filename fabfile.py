@@ -347,7 +347,7 @@ def octopi_releasetestrepo():
 
 def octopi_releasetestplugin_github_release_patcher():
 	# install release patcher
-	put("files/github_release_patcher.py", "~/.octoprint/plugins/github_release")
+	put("files/github_release_patcher.py", "~/.octoprint/plugins/github_release_patcher.py")
 
 def octopi_checkout(branch, committish=None):
 	# git checkout specified branch and committish
