@@ -92,8 +92,8 @@ def sync_test_repo(force=False):
 			else:
 				local("git push releasetest {}".format(branch))
 
-def test_rc_devel(tag=None, force=False):
-	# prep devel rc on testrepo
+def test_branch(dev_branch, prep_branch, release_branch, tag=None, force=False):
+	# prep release on testrepo
 	if tag is None:
 		tag = env.tag
 
@@ -101,28 +101,31 @@ def test_rc_devel(tag=None, force=False):
 		abort("Tag needs to be set")
 
 	if tag.endswith("rc1"):
-		merge_tag_push_test_repo("rc/devel", "devel", tag, force=force)
+		merge_tag_push_test_repo(release_branch, dev_branch, tag, force=force)
 	else:
-		merge_tag_push_test_repo("rc/devel", "staging/devel", tag, force=force)
+		merge_tag_push_test_repo(release_branch, prep_branch, tag, force=force)
+
+def test_rc_devel(tag=None, force=False):
+	test_branch("rc/devel", "staging/devel", "devel", tag=tag, force=force)
 
 def test_rc_maintenance(tag=None, force=False):
-	# prep maintenance rc on testrepo
-	if tag is None:
-		tag = env.tag
-
-	if tag is None:
-		abort("Tag needs to be set")
-
-	if tag.endswith("rc1"):
-		merge_tag_push_test_repo("rc/maintenance", "maintenance", tag, force=force)
-	else:
-		merge_tag_push_test_repo("rc/maintenance", "staging/maintenance", tag, force=force)
+	test_branch("rc/maintenance", "staging/maintenance", "maintenance", tag=tag, force=force)
 
 def test_stable(tag=None, force=False):
 	# prep stable release on testrepo
-	test_rc_maintenance(tag, force=force)
+	test_rc_maintenance(tag=tag, force=force)
 	merge_push_test_repo("master", "rc/maintenance")
 	merge_push_test_repo("rc/devel", "rc/maintenance")
+
+def test_hotfix(tag=None, force=False):
+	# prep hotfix release on testrepo
+	if tag is None:
+		tag = env.tag
+
+	if tag is None:
+		abort("Tag needs to be set")
+
+	merge_tag_push_test_repo("master", "staging/hotfix", tag, force=force)
 
 def merge_tag_push_test_repo(push_branch, merge_branch, tag=None, force=False):
 	# merge, tag and push to testrepo
