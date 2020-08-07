@@ -333,27 +333,54 @@ def flashhost_flash_and_provision(version, target=None):
 
 ##~~ OctoPi ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def release_patch(tag, branch, prerelease):
+def release_patch(key, tag, repo, additional_repos=None, branch="master", prerelease=False, pip=None):
 	# generate release patch
 	now = datetime.datetime.utcnow().replace(microsecond=0).isoformat(' ')
 
 	tag_name = "{} (release candidate)" if prerelease else "{} (stable)"
 	tag_name = tag_name.format(tag)
 
-	release = dict(draft=False,
-				   html_url="https://github.com/OctoPrint/OctoPrint/releases/tag/{}".format(tag),
-				   name=tag_name,
-				   prerelease=prerelease,
-				   published_at=now,
-				   tag_name=tag,
-				   target_commitish=branch)
+	if additional_repos is None:
+		additional_repos = []
 
-	config = dict(plugins=dict(github_release_patcher=dict(releases=dict()),
-	                           softwareupdate=dict(checks=dict(octoprint=dict(pip="{}/archive/{{target_version}}.zip".format(env.releasetest_repo))))))
-	config["plugins"]["github_release_patcher"]["releases"]["OctoPrint/OctoPrint"] = [release,]
-	config["plugins"]["github_release_patcher"]["releases"]["foosel/OctoPrint"] = [release,]
+	checks = dict()
+	if pip is not None:
+		checks[key] = dict(pip=pip)
+
+	release = dict(draft=False,
+					html_url="https://github.com/{}/releases/tag/{}".format(repo, tag),
+					name=tag_name,
+					prerelease=prerelease,
+					published_at=now,
+					tag_name=tag,
+					target_commitish=branch)
+	
+	releases = dict()
+	releases[repo] = [release,]
+	for repo in additional_repos:
+		releases[repo] = [release,]
+
+	config = dict(plugins=dict(github_release_patcher=dict(releases=releases),
+	                           softwareupdate=dict(checks=checks)))
 
 	return config
+
+def release_patch_octoprint(tag, branch, prerelease):
+	return release_patch("octoprint", tag, "OctoPrint/OctoPrint", 
+	                     additional_repos=["foosel/OctoPrint",], 
+	                     branch=branch, 
+	                     prerelease=prerelease, 
+	                     pip="{}/archive/{{target_version}}.zip".format(env.releasetest_repo))
+
+def release_patch_filecheck(tag, branch="master"):
+	return release_patch("file_check", tag, "OctoPrint/OctoPrint-FileCheck",
+	                     branch=branch,
+	                     pip="https://github.com/OctoPrint/OctoPrint-FileCheck/archive/{}.zip".format(branch))
+
+def release_patch_firmwarecheck(tag, branch="master"):
+	return release_patch("firmware_check", tag, "OctoPrint/OctoPrint-FirmwareCheck",
+	                     branch=branch,
+	                     pip="https://github.com/OctoPrint/OctoPrint-FirmwareCheck/archive/{}.zip".format(branch))
 
 def octopi_octoservice(command):
 	# run service command
@@ -369,7 +396,8 @@ def octopi_releasetestrepo():
 
 def octopi_releasetestplugin_github_release_patcher():
 	# install release patcher
-	put("files/github_release_patcher.py", "~/.octoprint/plugins/github_release_patcher.py")
+	if not files.exists("~/.octoprint/plugins/github_release_patcher.py"):
+		put("files/github_release_patcher.py", "~/.octoprint/plugins/github_release_patcher.py")
 
 def octopi_checkout(branch, committish=None):
 	# git checkout specified branch and committish
@@ -393,9 +421,17 @@ def octopi_tailoctolog():
 	# tail octoprint.log
 	run("tail -f ~/.octoprint/logs/octoprint.log")
 
-def octopi_test_releasepatch(tag, branch, prerelease):
+def octopi_test_releasepatch_octoprint(tag, branch, prerelease):
 	# creates & applies release patch
-	config = release_patch(tag, branch, bool(prerelease))
+	config = release_patch_octoprint(tag, branch, bool(prerelease))
+	octopi_update_config(config)
+
+def octopi_test_releasepatch_filecheck(tag):
+	config = release_patch_filecheck(tag)
+	octopi_update_config(config)
+
+def octopi_test_releasepatch_firmwarecheck(tag):
+	config = release_patch_firmwarecheck(tag)
 	octopi_update_config(config)
 
 def octopi_update_config(config):
@@ -536,7 +572,49 @@ def octopi_test_update(version, channel, tag, branch, prerelease, config, target
 	with settings(host_string=host_string, host=host):
 		octopi_await_ntp()
 		octopi_provision(config, version, release_channel=channel, restart=False)
-		octopi_test_releasepatch(tag, branch, prerelease)
+		octopi_test_releasepatch_octoprint(tag, branch, prerelease)
+		octopi_octoservice("restart")
+
+		octopi_await_server()
+		webbrowser.open("http://{}".format(env.host))
+		octopi_tailoctolog()
+
+def octopi_test_filecheck(tag, target=None):
+	if target is None:
+		target = env.target
+
+	host_string = env.host_string
+	host = env.host
+	if target:
+		if not target in env.targets:
+			abort("Unknown target: {}".format(target))
+		host = "{}.lan".format(env.targets[target]["hostname"])
+		host_string = "{}@{}".format(env.user, host)
+
+	with settings(host_string=host_string, host=host):
+		octopi_releasetestplugin_github_release_patcher()
+		octopi_test_releasepatch_filecheck(tag)
+		octopi_octoservice("restart")
+
+		octopi_await_server()
+		webbrowser.open("http://{}".format(env.host))
+		octopi_tailoctolog()
+
+def octopi_test_firmwarecheck(tag, target=None):
+	if target is None:
+		target = env.target
+
+	host_string = env.host_string
+	host = env.host
+	if target:
+		if not target in env.targets:
+			abort("Unknown target: {}".format(target))
+		host = "{}.lan".format(env.targets[target]["hostname"])
+		host_string = "{}@{}".format(env.user, host)
+
+	with settings(host_string=host_string, host=host):
+		octopi_releasetestplugin_github_release_patcher()
+		octopi_test_releasepatch_firmwarecheck(tag)
 		octopi_octoservice("restart")
 
 		octopi_await_server()
