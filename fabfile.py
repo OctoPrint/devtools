@@ -255,6 +255,9 @@ def flashhost_provision(target=None):
 	boot = boot_part_device(serial)
 	mount = "{}/{}".format(env.flashhost["mounts"], target)
 
+	if not files.exists(mount):
+		run("mkdir -p {}".format(mount))
+
 	if not files.exists(mount + "/cmdline.txt"):
 		sudo("mount {} {}".format(boot, mount))
 	files.upload_template("octopi-wpa-supplicant.txt", 
