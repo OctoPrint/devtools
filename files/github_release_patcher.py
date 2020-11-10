@@ -1,5 +1,5 @@
 # coding=utf-8
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import octoprint.plugin
 import json
@@ -11,6 +11,8 @@ class GithubReleasePatcherPlugin(octoprint.plugin.StartupPlugin,
 		self._thread = None
 
 	def on_after_startup(self):
+		self._logger.info("Starting up GithubReleasePatcherPlugin...")
+
 		import threading
 
 		self._thread = threading.Thread(target=self._patch)
@@ -31,13 +33,16 @@ class GithubReleasePatcherPlugin(octoprint.plugin.StartupPlugin,
 				self._logger.exception("Could not import github_release version_checker for patching")
 				return
 
-		import BaseHTTPServer
-		import SimpleHTTPServer
+		try:
+			from http.server import BaseHTTPRequestHandler, HTTPServer
+		except ImportError:
+			from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+
 		import random
 
 		releases = self._settings.get(["releases"])
 
-		class ReleaseHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+		class ReleaseHandler(BaseHTTPRequestHandler):
 			def do_GET(self):
 				split_path = self.path.split("/")
 				if not len(split_path) == 4:
@@ -59,13 +64,15 @@ class GithubReleasePatcherPlugin(octoprint.plugin.StartupPlugin,
 					self.send_response(200)
 					self.send_header("Content-Type", "application/json")
 					self.end_headers()
-					json.dump(release_list, self.wfile)
+
+					output = json.dumps(release_list).encode("utf-8")
+					self.wfile.write(output)
 
 		server_port = self._settings.get_int(["port"])
-		for _ in xrange(10):
+		for _ in range(10):
 			if server_port:
 				try:
-					self._server = BaseHTTPServer.HTTPServer(("127.0.0.1", server_port), ReleaseHandler)
+					self._server = HTTPServer(("127.0.0.1", server_port), ReleaseHandler)
 					self._logger.info("Started dummy release server on http://127.0.0.1:{}".format(server_port))
 					break
 				except:
@@ -84,6 +91,7 @@ class GithubReleasePatcherPlugin(octoprint.plugin.StartupPlugin,
 		self._server.serve_forever()
 
 __plugin_name__ = "Github release patcher"
-__plugin_version__ = "0.1.0"
+__plugin_version__ = "0.2.0"
+__plugin_pythoncompat__ = ">=2.7,<4"
 __plugin_description__ = "Patches the Github release API endpoint to point to some local service"
 __plugin_implementation__ = GithubReleasePatcherPlugin()
