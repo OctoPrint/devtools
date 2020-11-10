@@ -77,3 +77,7 @@ start version combinations.
 ## Testrig
 
 Testrig files available in `./testrig`.
+
+## License
+
+MIT
