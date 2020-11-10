@@ -93,7 +93,7 @@ def sync_test_repo(force=False):
 			else:
 				local("git push releasetest {}".format(branch))
 
-def test_branch(dev_branch, prep_branch, release_branch, tag=None, force=False):
+def test_branch(release_branch, prep_branch, dev_branch, tag=None, force=False):
 	if tag is None:
 		tag = env.tag
 
@@ -149,6 +149,7 @@ def merge_tag_push_test_repo(push_branch, merge_branch, tag=None, force=False):
 			local("git tag -d {}".format(tag))
 		local("git tag {}".format(tag))
 
+		local("git push releasetest {}".format(push_branch))
 		local("git push --tags releasetest {}".format(tag))
 
 def merge_push_test_repo(push_branch, merge_branch):
