@@ -1,4 +1,6 @@
 fabric3
 pyyaml
 requests
+zeroconf
+click
 -r ../PatreonExportHelper/requirements.txt
