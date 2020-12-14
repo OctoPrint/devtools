@@ -93,6 +93,17 @@ def sync_test_repo(force=False):
 			else:
 				local("git push releasetest {}".format(branch))
 
+@task
+def merge_and_push(branch="master", force=False):
+	with lcd(env.octoprint):
+		for pushbranch in ("rc/maintenance", "rc/devel", "staging/maintenance", "staging/devel"):
+			local("git checkout {}".format(pushbranch))
+			local("git merge {}".format(branch))
+			if force:
+				local("git push --force")
+			else:
+				local("git push")
+
 def test_branch(release_branch, prep_branch, dev_branch, tag=None, force=False):
 	if tag is None:
 		tag = env.tag
