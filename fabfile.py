@@ -134,15 +134,15 @@ def test_stable(tag=None, force=False):
 	merge_push_test_repo("rc/devel", "rc/maintenance")
 
 @task
-def test_hotfix(tag=None, force=False):
-	"""prep hotfix release on testrepo"""
+def test_bugfix(tag=None, force=False):
+	"""prep bugfix release on testrepo"""
 	if tag is None:
 		tag = env.tag
 
 	if tag is None:
 		abort("Tag needs to be set")
 
-	merge_tag_push_test_repo("master", "staging/hotfix", tag, force=force)
+	merge_tag_push_test_repo("master", "staging/bugfix", tag, force=force)
 
 def merge_tag_push_test_repo(push_branch, merge_branch, tag=None, force=False):
 	# merge, tag and push to testrepo
