@@ -577,7 +577,7 @@ def octopi_test_simplepip(tag=None, target=None):
 		octopi_tailoctolog()
 
 @task
-def octopi_test_clean(version, target=None):
+def octopi_test_clean(version=None, target=None):
 	if target is None:
 		target = env.target
 
@@ -591,10 +591,10 @@ def octopi_test_clean(version, target=None):
 
 	with settings(host_string=host_string, host=host):
 		octopi_await_ntp()
-		octopi_octoservice("stop")
 		if version is not None:
+			octopi_octoservice("stop")
 			octopi_install("OctoPrint=={}".format(version))
-		octopi_octoservice("restart")
+			octopi_octoservice("restart")
 
 		octopi_await_server()
 		webbrowser.open("http://{}".format(env.host))
