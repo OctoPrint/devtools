@@ -1,27 +1,113 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 21.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<svg version="1.1" id="Layer_1" shaper:fusionaddin="version:1.5.0" xmlns:shaper="http://www.shapertools.com/namespaces/shaper"
-	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 396.9 220.4"
-	 style="enable-background:new 0 0 396.9 220.4;" xml:space="preserve">
-<style type="text/css">
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:shaper="http://www.shapertools.com/namespaces/shaper"
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   version="1.1"
+   id="Layer_1"
+   shaper:fusionaddin="version:1.5.0"
+   x="0px"
+   y="0px"
+   viewBox="0 0 529.13388 294.42133"
+   xml:space="preserve"
+   sodipodi:docname="tray-pi-and-sdmux.svg"
+   width="140mm"
+   height="77.898972mm"
+   inkscape:version="1.0.2-2 (e86c870879, 2021-01-15)"><metadata
+   id="metadata31"><rdf:RDF><cc:Work
+       rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type
+         rdf:resource="http://purl.org/dc/dcmitype/StillImage" /><dc:title></dc:title></cc:Work></rdf:RDF></metadata><defs
+   id="defs29" /><sodipodi:namedview
+   pagecolor="#ffffff"
+   bordercolor="#666666"
+   borderopacity="1"
+   objecttolerance="10"
+   gridtolerance="10"
+   guidetolerance="10"
+   inkscape:pageopacity="0"
+   inkscape:pageshadow="2"
+   inkscape:window-width="1920"
+   inkscape:window-height="1137"
+   id="namedview27"
+   showgrid="false"
+   units="mm"
+   fit-margin-top="0"
+   fit-margin-left="0"
+   fit-margin-right="0"
+   fit-margin-bottom="0"
+   inkscape:document-units="mm"
+   inkscape:zoom="1.2809518"
+   inkscape:cx="107.27122"
+   inkscape:cy="292.94947"
+   inkscape:window-x="-8"
+   inkscape:window-y="-8"
+   inkscape:window-maximized="1"
+   inkscape:current-layer="Layer_1" />
+<style
+   type="text/css"
+   id="style10">
 	.st0{fill:none;stroke:#000000;stroke-miterlimit:10;}
 	.st1{fill:none;stroke:#000000;}
 </style>
-<path vector-effect="non-scaling-stroke" shaper:cutDepth="0.003" shaper:pathType="exterior" class="st0" d="M36.9,156.6H14.2
-	C6.3,156.6,0,163,0,170.8v35.4c0,7.8,6.3,14.2,14.2,14.2h368.5c7.8,0,14.2-6.3,14.2-14.2V7.8h-39v8.5h3.9v7.1h-3.9v12.8h-8.5V23.4
-	h-3.9v-7.1h3.9V7.8h-17.7V0h-11.3v7.8h-102V0h-11.3v7.8h-17.7v8.5h3.9v7.1h-3.9v12.8h-8.5V23.4h-3.9v-7.1h3.9V7.8H76.5V0H65.2v7.8
-	H47.5v8.5h3.9v7.1h-3.9v12.8H39V23.4h-3.9v-7.1H39V7.8H0v92.1c0,7.8,6.3,14.2,14.2,14.2h22.7c3.1,0,5.7,2.5,5.7,5.7l0,0v31.2
-	C42.5,154.1,40,156.6,36.9,156.6L36.9,156.6z"/>
-<path vector-effect="non-scaling-stroke" shaper:cutDepth="0.003" shaper:pathType="interior" class="st1" d="M74.4,75.8
-	c0,2.7,2.2,5,5,5c2.7,0,5-2.2,5-5c0,0,0,0,0,0c0-2.7-2.2-5-5-5C76.6,70.9,74.4,73.1,74.4,75.8C74.4,75.8,74.4,75.8,74.4,75.8z"/>
-<path vector-effect="non-scaling-stroke" shaper:cutDepth="0.003" shaper:pathType="interior" class="st1" d="M362.8,82.9
-	c3.1,0,5.7,2.5,5.7,5.7v99.2c0,3.1-2.5,5.7-5.7,5.7H161.6c-3.1,0-5.7-2.5-5.7-5.7V88.6c0-3.1,2.5-5.7,5.7-5.7H362.8z"/>
-<path vector-effect="non-scaling-stroke" shaper:cutDepth="0.003" shaper:pathType="interior" class="st1" d="M326.7,68.7
-	c0,2,1.6,3.5,3.5,3.5s3.5-1.6,3.5-3.5c0-2-1.6-3.5-3.5-3.5S326.7,66.8,326.7,68.7z"/>
-<path vector-effect="non-scaling-stroke" shaper:cutDepth="0.003" shaper:pathType="interior" class="st1" d="M162.3,68.7
-	c0,2,1.6,3.5,3.5,3.5c2,0,3.5-1.6,3.5-3.5c0-2-1.6-3.5-3.5-3.5C163.9,65.2,162.3,66.8,162.3,68.7z"/>
-<path vector-effect="non-scaling-stroke" shaper:cutDepth="0.003" shaper:pathType="interior" class="st1" d="M162.3,207.6
-	c0,2,1.6,3.5,3.5,3.5c2,0,3.5-1.6,3.5-3.5s-1.6-3.5-3.5-3.5C163.9,204.1,162.3,205.7,162.3,207.6z"/>
-<path vector-effect="non-scaling-stroke" shaper:cutDepth="0.003" shaper:pathType="interior" class="st1" d="M326.7,207.6
-	c0,2,1.6,3.5,3.5,3.5s3.5-1.6,3.5-3.5s-1.6-3.5-3.5-3.5S326.7,205.7,326.7,207.6z"/>
+<path
+   vector-effect="non-scaling-stroke"
+   shaper:cutDepth="0.003"
+   shaper:pathType="exterior"
+   class="st0"
+   d="M 49.735127,208.91412 H 19.5483 c -10.5055481,0 -18.88338998,8.51082 -18.88338998,18.88339 v 47.0755 c 0,10.37256 8.37784188,18.88338 18.88338998,18.88338 h 490.03726 c 10.37257,0 18.88339,-8.37784 18.88339,-18.88338 V 11.037477 h -51.86284 v 11.303436 h 5.18629 v 9.441696 h -5.18629 V 48.804256 H 465.30268 V 31.782609 h -5.18628 v -9.441696 h 5.18628 V 11.037477 H 441.76494 V 0.66491002 H 426.73801 V 11.037477 H 291.09676 V 0.66491002 H 276.06984 V 11.037477 h -23.53775 v 11.303436 h 5.18628 v 9.441696 h -5.18628 V 48.804256 H 241.22866 V 31.782609 h -5.18629 v -9.441696 h 5.18629 V 11.037477 H 102.39585 V 0.66491002 H 87.368925 V 11.037477 H 63.831178 v 11.303436 h 5.186284 v 9.441696 H 63.831178 V 48.804256 H 52.527741 V 31.782609 h -5.186284 v -9.441696 h 5.186284 V 11.037477 H 0.66491002 V 133.51354 c 0,10.37257 8.37784188,18.8834 18.88338998,18.8834 h 30.186827 c 4.12243,0 7.579952,3.32454 7.579952,7.57995 v 0 41.49026 c -0.132981,4.12243 -3.457522,7.44697 -7.579952,7.44697 z"
+   id="path12"
+   style="stroke-width:1.32982;image-rendering:auto" />
+<path
+   vector-effect="non-scaling-stroke"
+   shaper:cutDepth="0.003"
+   shaper:pathType="interior"
+   class="st1"
+   d="m 95.767166,97.557206 c 0,3.452224 2.812921,6.393004 6.393004,6.393004 3.45222,0 6.393,-2.81292 6.393,-6.393004 0,0 0,0 0,0 0,-3.45222 -2.81292,-6.393001 -6.393,-6.393001 -3.580083,0.12786 -6.393004,2.940781 -6.393004,6.393001 0,0 0,0 0,0 z"
+   id="path14"
+   style="stroke-width:1.2786" />
+<path
+   vector-effect="non-scaling-stroke"
+   shaper:cutDepth="0.003"
+   shaper:pathType="interior"
+   class="st1"
+   d="m 464.5155,106.63527 c 3.96366,0 7.28802,3.1965 7.28802,7.28802 v 126.83715 c 0,3.96366 -3.1965,7.28802 -7.28802,7.28802 H 207.26111 c -3.96366,0 -7.28802,-3.1965 -7.28802,-7.28802 V 113.92329 c 0,-3.96366 3.1965,-7.28802 7.28802,-7.28802 z"
+   id="path16"
+   style="stroke-width:1.2786" />
+<path
+   vector-effect="non-scaling-stroke"
+   shaper:cutDepth="0.003"
+   shaper:pathType="interior"
+   class="st1"
+   d="m 418.35802,88.479144 c 0,2.557201 2.04577,4.475101 4.47511,4.475101 2.42934,0 4.4751,-2.04576 4.4751,-4.475101 0,-2.5572 -2.04576,-4.475101 -4.4751,-4.475101 -2.42934,0 -4.47511,2.045761 -4.47511,4.475101 z"
+   id="path18"
+   style="stroke-width:1.2786" />
+<path
+   vector-effect="non-scaling-stroke"
+   shaper:cutDepth="0.003"
+   shaper:pathType="interior"
+   class="st1"
+   d="m 208.15613,88.479144 c 0,2.557201 2.04576,4.475101 4.4751,4.475101 2.5572,0 4.4751,-2.04576 4.4751,-4.475101 0,-2.5572 -2.04576,-4.475101 -4.4751,-4.475101 -2.42934,0 -4.4751,2.045761 -4.4751,4.475101 z"
+   id="path20"
+   style="stroke-width:1.2786" />
+<path
+   vector-effect="non-scaling-stroke"
+   shaper:cutDepth="0.003"
+   shaper:pathType="interior"
+   class="st1"
+   d="m 208.15613,266.07673 c 0,2.5572 2.04576,4.4751 4.4751,4.4751 2.5572,0 4.4751,-2.04576 4.4751,-4.4751 0,-2.42934 -2.04576,-4.4751 -4.4751,-4.4751 -2.42934,0 -4.4751,2.04576 -4.4751,4.4751 z"
+   id="path22"
+   style="stroke-width:1.2786" />
+<path
+   vector-effect="non-scaling-stroke"
+   shaper:cutDepth="0.003"
+   shaper:pathType="interior"
+   class="st1"
+   d="m 418.35802,266.07673 c 0,2.5572 2.04577,4.4751 4.47511,4.4751 2.42934,0 4.4751,-2.04576 4.4751,-4.4751 0,-2.42934 -2.04576,-4.4751 -4.4751,-4.4751 -2.42934,0 -4.47511,2.04576 -4.47511,4.4751 z"
+   id="path24"
+   style="stroke-width:1.2786" />
 </svg>
