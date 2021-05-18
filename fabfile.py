@@ -250,12 +250,12 @@ def flashhost_flash(version, target=None):
 	serial = env.targets[target]["serial"]
 	targetdev = disk_device(serial)
 
-	sudo("flock -w300 {} dd bs=4M if={} of={} status=progress conv=fsync".format(lockfile, imagefile, targetdev))
+	sudo("flock -w600 {} dd bs=4M if={} of={} status=progress conv=fsync".format(lockfile, imagefile, targetdev))
 
 @task
 @hosts('pi@flashhost.lan')
 def flashhost_provision(target=None):
-	"""provisions target with wifi, hostname and password"""
+	"""provisions target with wifi, hostname, password and boot_delay"""
 	if target is None:
 		target = env.target
 	if not target in env.targets:
@@ -304,6 +304,7 @@ def flashhost_provision(target=None):
 	                      backup=False,
 	                      keep_trailing_newline=True,
 	                      use_sudo=True)
+	files.append(mount + "/config.txt", "boot_delay=3", use_sudo=True)
 	sudo("umount {}".format(mount))
 
 @task
