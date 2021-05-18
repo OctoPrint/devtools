@@ -3,8 +3,6 @@ venv
 
 fabfile.yaml
 
-*.csv
-stickers
-SUPPORTERS.md
-
 node_modules
+
+.vscode
