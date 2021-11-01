@@ -797,6 +797,26 @@ def octopi_provision(config, version, release_channel=None, restart=True):
 
 
 @task
+def octopi_wait(target=None):
+    if target is None:
+        target = env.target
+
+    host_string = env.host_string
+    host = env.host
+    if target:
+        if not target in env.targets:
+            abort("Unknown target: {}".format(target))
+        host = "{}.lan".format(env.targets[target]["hostname"])
+        host_string = "{}@{}".format(env.user, host)
+
+    with settings(host_string=host_string, host=host):
+        octopi_await_ntp()
+        octopi_await_server()
+        webbrowser.open("http://{}".format(env.host))
+        octopi_tailoctolog()
+
+
+@task
 def octopi_test_simplepip(tag=None, target=None):
     """tests simple pip install of tag"""
     if tag is None:
