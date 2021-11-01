@@ -18,7 +18,6 @@ from fabric.state import env
 from fabric.contrib import files
 
 import datetime
-import calendar
 import sys
 import os
 import codecs
@@ -27,6 +26,7 @@ import time
 import requests
 import webbrowser
 import datetime
+import pkg_resources
 
 from io import StringIO, BytesIO
 
@@ -97,6 +97,53 @@ def dict_merge(a, b, leaf_merger=None):
             result[k] = merged
     return result
 
+
+def normalize_version(version):
+    if "-" in version:
+        version = version[: version.find("-")]
+
+    # Debian has the python version set to 2.7.15+ which is not PEP440 compliant (bug 914072)
+    if version.endswith("+"):
+        version = version[:-1]
+
+    if version[0].lower() == "v":
+        version = version[1:]
+
+    return version.strip()
+
+
+def get_comparable_version(version_string, cut=None, **kwargs):
+    """
+    Args:
+        version_string: The version string for which to create a comparable version instance
+        cut: optional, how many version digits to remove (e.g., cut=1 will turn 1.2.3 into 1.2).
+             Defaults to ``None``, meaning no further action. Settings this to 0 will remove
+             anything up to the last digit, e.g. dev or rc information.
+
+    Returns:
+        A comparable version
+    """
+
+    if "base" in kwargs and kwargs.get("base", False) and cut is None:
+        cut = 0
+    if cut is not None and (cut < 0 or not isinstance(cut, int)):
+        raise ValueError("level must be a positive integer")
+
+    version_string = normalize_version(version_string)
+    version = pkg_resources.parse_version(version_string)
+
+    if cut is not None:
+        # new setuptools
+        version = pkg_resources.parse_version(version.base_version)
+        if cut is not None:
+            parts = version.base_version.split(".")
+            if 0 < cut < len(parts):
+                reduced = parts[:-cut]
+                version = pkg_resources.parse_version(
+                    ".".join(str(x) for x in reduced)
+                )
+
+    return version
 
 ##~~ Release testing ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -594,6 +641,27 @@ def octopi_tailoctolog():
     run("tail -f ~/.octoprint/logs/octoprint.log")
 
 
+@task
+def octopi_get_version(target=None):
+    if target is None:
+        target = env.target
+
+    octopi_version_string = run("cat /etc/octopi_version")
+    print("OctoPi version: {}".format(octopi_version_string))
+    return octopi_version_string
+
+
+def octopi_patch_python_env(target=None):
+    if target is None:
+        target = env.target
+
+    octopi_version_string = octopi_get_version(target=target)
+    octopi_version = get_comparable_version(octopi_version_string)
+
+    if octopi_version < get_comparable_version("0.16.0"):
+        octopi_install("wrapt==1.12.1")
+
+
 def octopi_test_releasepatch_octoprint(tag, branch, prerelease):
     # creates & applies release patch
     config = release_patch_octoprint(tag, branch, bool(prerelease))
@@ -676,6 +744,7 @@ def octopi_provision(config, version, release_channel=None, restart=True):
     """provisions instance: start version, config, release channel, release patcher"""
     octopi_octoservice("stop")
     if version is not None:
+        octopi_patch_python_env()
         octopi_install("OctoPrint=={}".format(version))
 
     with codecs.open(
