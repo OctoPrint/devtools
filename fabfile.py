@@ -508,6 +508,16 @@ def flashhost_flash_and_provision(version, target=None):
     flashhost_provision(target=target)
     flashhost_dut(target=target)
 
+@task
+@hosts("pi@flashhost")
+def flashhost_list_images():
+    path = env.flashhost["images"]
+    print("Available images:")
+    for f in run("ls -1 {}".format(path), quiet=True).split("\n"):
+        f = f.strip()
+        if not f.startswith("octopi-") or not f.endswith(".img"):
+            continue
+        print("  {}".format(f[len("octopi-"):-len(".img")]))
 
 ##~~ OctoPi ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -740,12 +750,15 @@ def octopi_await_server(timeout=300):
 
 
 @task
-def octopi_provision(config, version, release_channel=None, restart=True):
+def octopi_provision(config, version, release_channel=None, pip=None, restart=True):
     """provisions instance: start version, config, release channel, release patcher"""
     octopi_octoservice("stop")
     if version is not None:
         octopi_patch_python_env()
         octopi_install("OctoPrint=={}".format(version))
+
+    if pip is not None:
+        octopi_install("pip=={}".format(pip))
 
     with codecs.open(
         os.path.join(config, "config.yaml"),
@@ -817,7 +830,7 @@ def octopi_wait(target=None):
 
 
 @task
-def octopi_test_simplepip(tag=None, target=None):
+def octopi_test_simplepip(tag=None, target=None, pip=None):
     """tests simple pip install of tag"""
     if tag is None:
         tag = env.tag
@@ -840,6 +853,8 @@ def octopi_test_simplepip(tag=None, target=None):
         octopi_await_ntp()
         url = "{}/archive/{}.zip".format(env.releasetest_repo, tag)
         octopi_install(url)
+        if pip:
+            octopi_install("pip=={}".format(pip))
         octopi_octoservice("restart")
 
         octopi_await_server()
@@ -848,7 +863,7 @@ def octopi_test_simplepip(tag=None, target=None):
 
 
 @task
-def octopi_test_clean(version=None, target=None):
+def octopi_test_clean(version=None, target=None, pip=None):
     if target is None:
         target = env.target
 
@@ -862,9 +877,12 @@ def octopi_test_clean(version=None, target=None):
 
     with settings(host_string=host_string, host=host):
         octopi_await_ntp()
-        if version is not None:
+        if version or pip:
             octopi_octoservice("stop")
-            octopi_install("OctoPrint=={}".format(version))
+            if version:
+                octopi_install("OctoPrint=={}".format(version))
+            if pip:
+                octopi_install("pip=={}".format(pip))
             octopi_octoservice("restart")
 
         octopi_await_server()
@@ -872,7 +890,7 @@ def octopi_test_clean(version=None, target=None):
         octopi_tailoctolog()
 
 
-def octopi_test_update(version, channel, tag, branch, prerelease, config, target):
+def octopi_test_update(channel, branch, version=None, tag=None, prerelease=False, config="configs/with_acl", target=None, pip=None):
     """
     generic update test prep: wait for server, provision, apply
     release patch, restart, open browser and tail log
@@ -896,7 +914,7 @@ def octopi_test_update(version, channel, tag, branch, prerelease, config, target
 
     with settings(host_string=host_string, host=host):
         octopi_await_ntp()
-        octopi_provision(config, version, release_channel=channel, restart=False)
+        octopi_provision(config, version, release_channel=channel, pip=pip, restart=False)
         octopi_test_releasepatch_octoprint(tag, branch, prerelease)
         octopi_octoservice("restart")
 
@@ -955,23 +973,23 @@ def octopi_test_firmwarecheck(tag, target=None):
 
 @task
 def octopi_test_update_devel(
-    channel, tag=None, version=None, config="configs/with_acl", target=None
+    channel, tag=None, version=None, pip=None, config="configs/with_acl", target=None
 ):
     """tests update procedure for devel RCs"""
-    octopi_test_update(version, channel, tag, "rc/devel", True, config, target)
+    octopi_test_update(channel, "rc/devel", version=version, tag=tag, prerelease=True, config=config, target=target, pip=pip)
 
 
 @task
 def octopi_test_update_maintenance(
-    channel, tag=None, version=None, config="configs/with_acl", target=None
+    channel, tag=None, version=None, pip=None, config="configs/with_acl", target=None
 ):
     """tests update procedure for maintenance RCs"""
-    octopi_test_update(version, channel, tag, "rc/maintenance", True, config, target)
+    octopi_test_update(channel, "rc/maintenance", version=version, tag=tag, prerelease=True, config=config, target=target, pip=pip)
 
 
 @task
 def octopi_test_update_stable(
-    channel, tag=None, version=None, config="configs/with_acl", target=None
+    channel, tag=None, version=None, pip=None, config="configs/with_acl", target=None
 ):
     """tests update procedure for stable releases"""
-    octopi_test_update(version, channel, tag, "master", False, config, target)
+    octopi_test_update(channel, "master", version=version, tag=tag, prerelease=False, config=config, target=target, pip=pip)
