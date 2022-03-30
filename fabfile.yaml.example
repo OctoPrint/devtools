@@ -17,6 +17,7 @@ flashhost:
   usbsdmux: /path/to/usbsdmux
   ykush: /path/to/ykushcmd
   flashlock: /path/to/flash.lock
+  mqtt_annotation: /path/to/mqtt_annotation
 
 targets:
   example:
@@ -28,3 +29,10 @@ targets:
 
     # hostname to assign
     hostname: example
+
+    # um25c monitoring service to restart on power cycle
+    um25c: example
+
+fixes:
+  plugins:
+    example: https://example.com/example.py
