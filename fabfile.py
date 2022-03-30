@@ -345,6 +345,9 @@ def boot_part_device(serial):
         format_serial(serial)
     )
 
+def mqtt_annotate(target, text):
+    if env.flashhost.get("mqtt_annotation"):
+        run("{} {} \"{}\"".format(env.flashhost["mqtt_annotation"], target, text))
 
 @task
 @hosts("pi@flashhost.lan")
@@ -459,6 +462,8 @@ def flashhost_host(target=None):
         )
     )
 
+    mqtt_annotate(target, "Switched {} to Host mode".format(target))
+
 
 @task
 @hosts("pi@flashhost.lan")
@@ -477,6 +482,10 @@ def flashhost_dut(target=None):
         )
     )
     sudo("{} -u {}".format(env.flashhost["ykush"], usbport))
+    if env.targets[target].get("um25c"):
+        sudo("systemctl restart {}".format(env.targets[target]["um25c"]))
+
+    mqtt_annotate(target, "Switched {} to DUT mode".format(target))
 
 
 @task
@@ -492,6 +501,8 @@ def flashhost_reboot(target=None):
     sudo("{} -d {}".format(env.flashhost["ykush"], usbport))
     time.sleep(1.0)
     sudo("{} -u {}".format(env.flashhost["ykush"], usbport))
+
+    mqtt_annotate(target, "Rebooted {}".format(target))
 
 
 @task
@@ -606,6 +617,12 @@ def release_patch_firmwarecheck(tag, branch="master"):
 
 
 @task
+def octopi_reboot():
+    """reboots the system"""
+    sudo("shutdown -r now")
+
+
+@task
 def octopi_octoservice(command):
     """run service command"""
     sudo("service octoprint {}".format(command))
@@ -642,7 +659,18 @@ def octopi_releasetestplugin_github_release_patcher():
 @task
 def octopi_install(url):
     """install something inside OctoPrint venv"""
-    run("~/oprint/bin/pip install {}".format(url))
+    run('~/oprint/bin/pip install "{}"'.format(url))
+
+
+@task
+def octopi_curl_plugin(url):
+    """install a single file plugin from url"""
+    if url in env.fixes["plugins"]:
+        url = env.fixes["plugins"][url]
+
+    if not files.exists("~/.octoprint/plugins"):
+        run("mkdir -p ~/.octoprint/plugins")
+    run("cd ~/.octoprint/plugins && curl -L -O '{}'".format(url))
 
 
 @task
@@ -750,7 +778,7 @@ def octopi_await_server(timeout=300):
 
 
 @task
-def octopi_provision(config, version, release_channel=None, pip=None, restart=True):
+def octopi_provision(config, version, release_channel=None, pip=None, packages=None, fixes=None, restart=True):
     """provisions instance: start version, config, release channel, release patcher"""
     octopi_octoservice("stop")
     if version is not None:
@@ -759,6 +787,14 @@ def octopi_provision(config, version, release_channel=None, pip=None, restart=Tr
 
     if pip is not None:
         octopi_install("pip=={}".format(pip))
+
+    if packages:
+        for package in packages.split("|"):
+            octopi_install(package)
+
+    if fixes:
+        for fix in fixes.split("|"):
+            octopi_curl_plugin(fix)
 
     with codecs.open(
         os.path.join(config, "config.yaml"),
@@ -830,7 +866,7 @@ def octopi_wait(target=None):
 
 
 @task
-def octopi_test_simplepip(tag=None, target=None, pip=None):
+def octopi_test_simplepip(tag=None, target=None, pip=None, packages=None, fixes=None):
     """tests simple pip install of tag"""
     if tag is None:
         tag = env.tag
@@ -855,6 +891,12 @@ def octopi_test_simplepip(tag=None, target=None, pip=None):
         octopi_install(url)
         if pip:
             octopi_install("pip=={}".format(pip))
+        if packages:
+            for package in packages.split("|"):
+                octopi_install(package)
+        if fixes:
+            for fix in fixes.split("|"):
+                octopi_curl_plugin(fix)
         octopi_octoservice("restart")
 
         octopi_await_server()
@@ -863,7 +905,7 @@ def octopi_test_simplepip(tag=None, target=None, pip=None):
 
 
 @task
-def octopi_test_clean(version=None, target=None, pip=None):
+def octopi_test_clean(version=None, target=None, pip=None, packages=None, fixes=None):
     if target is None:
         target = env.target
 
@@ -883,6 +925,12 @@ def octopi_test_clean(version=None, target=None, pip=None):
                 octopi_install("OctoPrint=={}".format(version))
             if pip:
                 octopi_install("pip=={}".format(pip))
+            if packages:
+                for package in packages.split("|"):
+                    octopi_install(package)
+            if fixes:
+                for fix in fixes.split("|"):
+                    octopi_curl_plugin(fix)
             octopi_octoservice("restart")
 
         octopi_await_server()
@@ -890,7 +938,7 @@ def octopi_test_clean(version=None, target=None, pip=None):
         octopi_tailoctolog()
 
 
-def octopi_test_update(channel, branch, version=None, tag=None, prerelease=False, config="configs/with_acl", target=None, pip=None):
+def octopi_test_update(channel, branch, version=None, tag=None, prerelease=False, config="configs/with_acl", target=None, pip=None, packages=None, fixes=None):
     """
     generic update test prep: wait for server, provision, apply
     release patch, restart, open browser and tail log
@@ -914,7 +962,7 @@ def octopi_test_update(channel, branch, version=None, tag=None, prerelease=False
 
     with settings(host_string=host_string, host=host):
         octopi_await_ntp()
-        octopi_provision(config, version, release_channel=channel, pip=pip, restart=False)
+        octopi_provision(config, version, release_channel=channel, pip=pip, packages=packages, fixes=fixes, restart=False)
         octopi_test_releasepatch_octoprint(tag, branch, prerelease)
         octopi_octoservice("restart")
 
@@ -973,23 +1021,23 @@ def octopi_test_firmwarecheck(tag, target=None):
 
 @task
 def octopi_test_update_devel(
-    channel, tag=None, version=None, pip=None, config="configs/with_acl", target=None
+    channel, tag=None, version=None, pip=None, packages=None, fixes=None, config="configs/with_acl", target=None
 ):
     """tests update procedure for devel RCs"""
-    octopi_test_update(channel, "rc/devel", version=version, tag=tag, prerelease=True, config=config, target=target, pip=pip)
+    octopi_test_update(channel, "rc/devel", version=version, tag=tag, prerelease=True, config=config, target=target, pip=pip, packages=packages, fixes=fixes)
 
 
 @task
 def octopi_test_update_maintenance(
-    channel, tag=None, version=None, pip=None, config="configs/with_acl", target=None
+    channel, tag=None, version=None, pip=None, packages=None, fixes=None, config="configs/with_acl", target=None
 ):
     """tests update procedure for maintenance RCs"""
-    octopi_test_update(channel, "rc/maintenance", version=version, tag=tag, prerelease=True, config=config, target=target, pip=pip)
+    octopi_test_update(channel, "rc/maintenance", version=version, tag=tag, prerelease=True, config=config, target=target, pip=pip, packages=packages, fixes=fixes)
 
 
 @task
 def octopi_test_update_stable(
-    channel, tag=None, version=None, pip=None, config="configs/with_acl", target=None
+    channel, tag=None, version=None, pip=None, packages=None, fixes=None, config="configs/with_acl", target=None
 ):
     """tests update procedure for stable releases"""
-    octopi_test_update(channel, "master", version=version, tag=tag, prerelease=False, config=config, target=target, pip=pip)
+    octopi_test_update(channel, "master", version=version, tag=tag, prerelease=False, config=config, target=target, pip=pip, packages=packages, fixes=fixes)
