@@ -3,6 +3,7 @@ password: <rpi password>
 
 wifi_ssid: <ssid>
 wifi_psk: <password>
+wifi_country: DE
 
 releasetest_repo: https://<owner>:<token>@github.com/<owner>/<repo>
 

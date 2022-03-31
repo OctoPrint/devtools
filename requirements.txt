@@ -3,4 +3,5 @@ pyyaml
 requests
 zeroconf
 click
+passlib
 -r ../PatreonExportHelper/requirements.txt

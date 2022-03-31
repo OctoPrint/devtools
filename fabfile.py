@@ -28,7 +28,7 @@ import webbrowser
 import datetime
 import pkg_resources
 
-from io import StringIO, BytesIO
+from io import StringIO, BytesIO, TextIOWrapper
 
 
 def env_from_yaml(path):
@@ -349,6 +349,30 @@ def mqtt_annotate(target, text):
     if env.flashhost.get("mqtt_annotation"):
         run("{} {} \"{}\"".format(env.flashhost["mqtt_annotation"], target, text))
 
+def read_file(path):
+    fd = BytesIO()
+    try:
+        get(path, fd)
+        fd.seek(0)
+        return fd.read()
+    finally:
+        fd.close()
+
+def write_file(path, data, use_sudo=False):
+    fd = BytesIO()
+    try:
+        fd.write(data)
+        fd.seek(0)
+        put(fd, path, use_sudo=use_sudo)
+    finally:
+        fd.close()
+
+def print_file(path):
+    print("-" * len(path))
+    print(path)
+    print("-" * len(path))
+    print(read_file(path).decode("utf-8"))
+
 @task
 @hosts("pi@flashhost.lan")
 def flashhost_release_lock():
@@ -380,30 +404,14 @@ def flashhost_flash(version, target=None):
     )
 
 
-@task
-@hosts("pi@flashhost.lan")
-def flashhost_provision(target=None):
-    """provisions target with wifi, hostname, password and boot_delay"""
-    if target is None:
-        target = env.target
-    if not target in env.targets:
-        abort("Unknown target: {}".format(target))
-    serial = env.targets[target]["serial"]
+def flashhost_provision_octopi(target, boot):
     hostname = env.targets[target]["hostname"]
     password = env.password
 
-    boot = boot_part_device(serial)
-    mount = "{}/{}".format(env.flashhost["mounts"], target)
-
-    if not files.exists(mount):
-        run("mkdir -p {}".format(mount))
-
-    if not files.exists(mount + "/cmdline.txt"):
-        sudo("mount {} {}".format(boot, mount))
     files.upload_template(
         "octopi-wpa-supplicant.txt",
-        mount + "/octopi-wpa-supplicant.txt",
-        context=dict(ssid=env.wifi_ssid, psk=env.wifi_psk),
+        boot + "/octopi-wpa-supplicant.txt",
+        context=dict(ssid=env.wifi_ssid, psk=env.wifi_psk, country=env.wifi_country),
         use_jinja=True,
         template_dir="templates",
         backup=False,
@@ -412,7 +420,7 @@ def flashhost_provision(target=None):
     )
     files.upload_template(
         "octopi-network.txt",
-        mount + "/octopi-network.txt",
+        boot + "/octopi-network.txt",
         context=dict(ssid=env.wifi_ssid, psk=env.wifi_psk),
         use_jinja=True,
         template_dir="templates",
@@ -422,7 +430,7 @@ def flashhost_provision(target=None):
     )
     files.upload_template(
         "octopi-hostname.txt",
-        mount + "/octopi-hostname.txt",
+        boot + "/octopi-hostname.txt",
         context=dict(hostname=hostname),
         use_jinja=True,
         template_dir="templates",
@@ -432,7 +440,7 @@ def flashhost_provision(target=None):
     )
     files.upload_template(
         "octopi-password.txt",
-        mount + "/octopi-password.txt",
+        boot + "/octopi-password.txt",
         context=dict(password=password),
         use_jinja=True,
         template_dir="templates",
@@ -440,6 +448,65 @@ def flashhost_provision(target=None):
         keep_trailing_newline=True,
         use_sudo=True,
     )
+
+def flashhost_provision_firstrun(target, boot):
+    from passlib.hash import sha512_crypt
+
+    hostname = env.targets[target]["hostname"]
+    user = env.targets[target].get("user", "pi")
+    password = env.password
+
+    passwordhash = sha512_crypt.using(rounds=5000).hash(password)
+
+    files.upload_template(
+        "firstrun.sh",
+        boot + "/firstrun.sh",
+        context=dict(
+            hostname=hostname,
+            user=user,
+            passwordhash=passwordhash,
+            ssid=env.wifi_ssid,
+            psk=env.wifi_psk,
+            country=env.wifi_country,
+        ),
+        use_jinja=True,
+        template_dir="templates",
+        backup=False,
+        keep_trailing_newline=True,
+        use_sudo=True,
+    )
+    print_file(boot + "/firstrun.sh")
+
+    cmdline = read_file(boot + "/cmdline.txt").strip()
+    if b"firstrun.sh" not in cmdline:
+        cmdline += b" systemd.run=/boot/firstrun.sh systemd.run_success_action=reboot systemd.unit=kernel-command-line.target"
+        write_file(boot + "/cmdline.txt", cmdline, use_sudo=True)
+        print_file(boot + "/cmdline.txt")
+
+@task
+@hosts("pi@flashhost.lan")
+def flashhost_provision(target=None, firstrun=False):
+    """provisions target with wifi, hostname, password and boot_delay"""
+    if target is None:
+        target = env.target
+    if not target in env.targets:
+        abort("Unknown target: {}".format(target))
+
+    serial = env.targets[target]["serial"]
+    boot = boot_part_device(serial)
+    mount = "{}/{}".format(env.flashhost["mounts"], target)
+
+    if not files.exists(mount):
+        run("mkdir -p {}".format(mount))
+
+    if not files.exists(mount + "/cmdline.txt"):
+        sudo("mount {} {}".format(boot, mount))
+
+    if firstrun:
+        flashhost_provision_firstrun(target, mount)
+    else:
+        flashhost_provision_octopi(target, mount)
+
     files.append(mount + "/config.txt", "boot_delay=3", use_sudo=True)
     sudo("umount {}".format(mount))
 
@@ -461,6 +528,7 @@ def flashhost_host(target=None):
             env.flashhost["usbsdmux"], format_serial(serial)
         )
     )
+    time.sleep(5.0)
 
     mqtt_annotate(target, "Switched {} to Host mode".format(target))
 
@@ -507,7 +575,7 @@ def flashhost_reboot(target=None):
 
 @task
 @hosts("pi@flashhost")
-def flashhost_flash_and_provision(version, target=None):
+def flashhost_flash_and_provision(version, target=None, firstrun=False):
     """runs flash & provision cycle on target for specified OctoPi version"""
     if target is None:
         target = env.target
@@ -516,7 +584,7 @@ def flashhost_flash_and_provision(version, target=None):
     print("Flashing done, giving the system a bit to recover...")
     time.sleep(5.0)
     print("... done")
-    flashhost_provision(target=target)
+    flashhost_provision(target=target, firstrun=firstrun)
     flashhost_dut(target=target)
 
 @task
