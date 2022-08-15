@@ -5,3 +5,4 @@ zeroconf
 click
 passlib
 wheel
+jinja2

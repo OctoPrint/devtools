@@ -574,7 +574,7 @@ def flashhost_reboot(target=None):
 
 
 @task
-@hosts("pi@flashhost")
+@hosts("pi@flashhost.lan")
 def flashhost_flash_and_provision(version, target=None, firstrun=False):
     """runs flash & provision cycle on target for specified OctoPi version"""
     if target is None:
@@ -588,7 +588,7 @@ def flashhost_flash_and_provision(version, target=None, firstrun=False):
     flashhost_dut(target=target)
 
 @task
-@hosts("pi@flashhost")
+@hosts("pi@flashhost.lan")
 def flashhost_list_images():
     path = env.flashhost["images"]
     print("Available images:")
@@ -846,7 +846,7 @@ def octopi_await_server(timeout=300):
 
 
 @task
-def octopi_provision(config, version, release_channel=None, pip=None, packages=None, fixes=None, restart=True):
+def octopi_provision(config="configs/with_acl", version=None, release_channel=None, pip=None, packages=None, fixes=None, restart=True, releasetest=False, headless=False):
     """provisions instance: start version, config, release channel, release patcher"""
     octopi_octoservice("stop")
     if version is not None:
@@ -904,17 +904,19 @@ def octopi_provision(config, version, release_channel=None, pip=None, packages=N
     octopi_update_config(new_config)
     put(os.path.join(config, "users.yaml"), ".octoprint/users.yaml")
 
-    if files.exists("~/OctoPrint/.git"):
-        octopi_releasetestrepo()
-    octopi_releasetestplugin_github_release_patcher()
+    if releasetest:
+        if files.exists("~/OctoPrint/.git"):
+            octopi_releasetestrepo()
+        octopi_releasetestplugin_github_release_patcher()
 
     if restart:
         octopi_octoservice("restart")
-        octopi_tailoctolog()
+        if not headless:
+            octopi_tailoctolog()
 
 
 @task
-def octopi_wait(target=None):
+def octopi_wait(target=None, headless=False):
     if target is None:
         target = env.target
 
@@ -929,12 +931,13 @@ def octopi_wait(target=None):
     with settings(host_string=host_string, host=host):
         octopi_await_ntp()
         octopi_await_server()
-        webbrowser.open("http://{}".format(env.host))
-        octopi_tailoctolog()
+        if not headless:
+            webbrowser.open("http://{}".format(env.host))
+            octopi_tailoctolog()
 
 
 @task
-def octopi_test_simplepip(tag=None, target=None, pip=None, packages=None, fixes=None):
+def octopi_test_simplepip(tag=None, target=None, pip=None, packages=None, fixes=None, headless=False):
     """tests simple pip install of tag"""
     if tag is None:
         tag = env.tag
@@ -968,12 +971,13 @@ def octopi_test_simplepip(tag=None, target=None, pip=None, packages=None, fixes=
         octopi_octoservice("restart")
 
         octopi_await_server()
-        webbrowser.open("http://{}".format(env.host))
-        octopi_tailoctolog()
+        if not headless:
+            webbrowser.open("http://{}".format(env.host))
+            octopi_tailoctolog()
 
 
 @task
-def octopi_test_clean(version=None, target=None, pip=None, packages=None, fixes=None):
+def octopi_test_clean(version=None, target=None, pip=None, packages=None, fixes=None, headless=False):
     if target is None:
         target = env.target
 
@@ -1002,11 +1006,33 @@ def octopi_test_clean(version=None, target=None, pip=None, packages=None, fixes=
             octopi_octoservice("restart")
 
         octopi_await_server()
-        webbrowser.open("http://{}".format(env.host))
-        octopi_tailoctolog()
+        if not headless:
+            webbrowser.open("http://{}".format(env.host))
+            octopi_tailoctolog()
+
+@task
+def octopi_test_provisioned(version=None, config="configs/with_acl", target=None, pip=None, packages=None, fixes=None, headless=False):
+    if target is None:
+        target = env.target
+
+    host_string = env.host_string
+    host = env.host
+    if target:
+        if not target in env.targets:
+            abort("Unknown target: {}".format(target))
+        host = "{}.lan".format(env.targets[target]["hostname"])
+        host_string = "{}@{}".format(env.user, host)
+
+    with settings(host_string=host_string, host=host):
+        octopi_await_ntp()
+        octopi_provision(config=config, version=version, pip=pip, packages=packages, fixes=fixes, releasetest=True, headless=True)
+        octopi_await_server()
+        if not headless:
+            webbrowser.open("http://{}".format(env.host))
+            octopi_tailoctolog()
 
 
-def octopi_test_update(channel, branch, version=None, tag=None, prerelease=False, config="configs/with_acl", target=None, pip=None, packages=None, fixes=None):
+def octopi_test_update(channel, branch, version=None, tag=None, prerelease=False, config="configs/with_acl", target=None, pip=None, packages=None, fixes=None, headless=False):
     """
     generic update test prep: wait for server, provision, apply
     release patch, restart, open browser and tail log
@@ -1030,17 +1056,18 @@ def octopi_test_update(channel, branch, version=None, tag=None, prerelease=False
 
     with settings(host_string=host_string, host=host):
         octopi_await_ntp()
-        octopi_provision(config, version, release_channel=channel, pip=pip, packages=packages, fixes=fixes, restart=False)
+        octopi_provision(config, version=version, release_channel=channel, pip=pip, packages=packages, fixes=fixes, restart=False, releasetest=True, headless=True)
         octopi_test_releasepatch_octoprint(tag, branch, prerelease)
         octopi_octoservice("restart")
 
         octopi_await_server()
-        webbrowser.open("http://{}".format(env.host))
-        octopi_tailoctolog()
+        if not headless:
+            webbrowser.open("http://{}".format(env.host))
+            octopi_tailoctolog()
 
 
 @task
-def octopi_test_filecheck(tag, target=None):
+def octopi_test_filecheck(tag, target=None, headless=False):
     """tests update procedure for filecheck plugin"""
     if target is None:
         target = env.target
@@ -1059,12 +1086,13 @@ def octopi_test_filecheck(tag, target=None):
         octopi_octoservice("restart")
 
         octopi_await_server()
-        webbrowser.open("http://{}".format(env.host))
-        octopi_tailoctolog()
+        if not headless:
+            webbrowser.open("http://{}".format(env.host))
+            octopi_tailoctolog()
 
 
 @task
-def octopi_test_firmwarecheck(tag, target=None):
+def octopi_test_firmwarecheck(tag, target=None, headless=False):
     """tests update procedure for firmwarecheck plugin"""
     if target is None:
         target = env.target
@@ -1083,29 +1111,30 @@ def octopi_test_firmwarecheck(tag, target=None):
         octopi_octoservice("restart")
 
         octopi_await_server()
-        webbrowser.open("http://{}".format(env.host))
-        octopi_tailoctolog()
+        if not headless:
+            webbrowser.open("http://{}".format(env.host))
+            octopi_tailoctolog()
 
 
 @task
 def octopi_test_update_devel(
-    channel, tag=None, version=None, pip=None, packages=None, fixes=None, config="configs/with_acl", target=None
+    channel, tag=None, version=None, pip=None, packages=None, fixes=None, config="configs/with_acl", target=None, headless=False
 ):
     """tests update procedure for devel RCs"""
-    octopi_test_update(channel, "rc/devel", version=version, tag=tag, prerelease=True, config=config, target=target, pip=pip, packages=packages, fixes=fixes)
+    octopi_test_update(channel, "rc/devel", version=version, tag=tag, prerelease=True, config=config, target=target, pip=pip, packages=packages, fixes=fixes, headless=headless)
 
 
 @task
 def octopi_test_update_maintenance(
-    channel, tag=None, version=None, pip=None, packages=None, fixes=None, config="configs/with_acl", target=None
+    channel, tag=None, version=None, pip=None, packages=None, fixes=None, config="configs/with_acl", target=None, headless=False
 ):
     """tests update procedure for maintenance RCs"""
-    octopi_test_update(channel, "rc/maintenance", version=version, tag=tag, prerelease=True, config=config, target=target, pip=pip, packages=packages, fixes=fixes)
+    octopi_test_update(channel, "rc/maintenance", version=version, tag=tag, prerelease=True, config=config, target=target, pip=pip, packages=packages, fixes=fixes, headless=headless)
 
 
 @task
 def octopi_test_update_stable(
-    channel, tag=None, version=None, pip=None, packages=None, fixes=None, config="configs/with_acl", target=None
+    channel, tag=None, version=None, pip=None, packages=None, fixes=None, config="configs/with_acl", target=None, headless=False
 ):
     """tests update procedure for stable releases"""
-    octopi_test_update(channel, "master", version=version, tag=tag, prerelease=False, config=config, target=target, pip=pip, packages=packages, fixes=fixes)
+    octopi_test_update(channel, "master", version=version, tag=tag, prerelease=False, config=config, target=target, pip=pip, packages=packages, fixes=fixes, headless=headless)
