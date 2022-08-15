@@ -1,0 +1,124 @@
+name: "Test against testrig"
+
+# Needed secrets:
+# - DEPLOY_KEY: private ssh key to access fab@flashhost.lan
+# - DEPLOY_KNOWN_HOSTS: known hosts including fab@flashhost.lan
+# - TAILSCALE_AUTHKEY: reusable, ephemeral, tagged tailscale auth key to access flashhost
+#   and DUTs
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Target DUT to deploy to"
+        required: true
+        default: 'pia'
+      image:
+        description: "Image to deploy"
+        required: false
+        default: '0.18.0-latest'
+
+jobs:
+  deploy:
+    name: "🏗 Deploy"
+    runs-on: ubuntu-latest
+    outputs:
+      target: ${{ env.TARGET }}
+      image: ${{ env.IMAGE }}
+
+    steps:
+    - name: "🔑 Install SSH key in agent"
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.DEPLOY_KEY }}
+        known_hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+
+    - name: "🌐 Connect to tailscale network"
+      uses: tailscale/github-action@v1
+      with:
+        authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+
+    - name: ✔ Check if tailscale is running
+      run: |
+        tailscale --version
+        tailscale status
+        ping -c 3 flashhost
+        ssh fab@flashhost flashhost_list_images
+
+    - name: 🔍 Determine image
+      run: |
+        IMAGE=${{ github.event.inputs.image }}
+
+        if [[ "$IMAGE" == https://* ]] || [[ $IMAGE == http://* ]]
+        then
+          URL="$IMAGE"
+          IMAGE="github-run-${{ github.run_id }}-${{ github.run_attempt }}"
+          ssh fab@flashhost flashhost_fetch_image:"$URL",$IMAGE
+        fi
+
+        echo "Image: $IMAGE"
+        echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
+    - name: "🔥 Flash & provision image"
+      env:
+        TARGET: ${{ github.event.inputs.target }}
+        IMAGE: ${{ env.IMAGE }}
+      run: |
+        ssh -o SendEnv=TARGET fab@flashhost flashhost_flash_and_provision:$IMAGE octopi_wait:headless=1
+
+    - name: "🐙 Preconfigure OctoPrint"
+      env:
+        TARGET: ${{ github.event.inputs.target }}
+      run: |
+        ssh -o SendEnv=TARGET fab@flashhost octopi_test_provisioned:headless=1
+
+    - name: "🧹 Clean up if needed"
+      if: always()
+      run: |
+        IMAGE="${{ env.IMAGE }}"
+        [[ "$IMAGE" == "github-run-*" ]] && ssh fab@flashhost flashhost_remove_image:$IMAGE
+
+  e2e:
+    name: "🧪 E2E"
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+
+    - name: "🌐 Connect to tailscale network"
+      uses: tailscale/github-action@v1
+      with:
+        authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+
+    - name: ✔ Check if tailscale is running and make sure DUT is up
+      run: |
+        tailscale --version
+        tailscale status
+        curl http://flashhost/${{ github.event.inputs.target }}/
+
+    - name: "⬇ Checkout latest OctoPrint"
+      uses: actions/checkout@v3
+      with:
+        repository: OctoPrint/OctoPrint
+        path: OctoPrint
+
+    - name: 🚀 Run Cypress
+      uses: cypress-io/github-action@v2
+      with:
+        working-directory: OctoPrint/tests/cypress
+        browser: chrome
+      env:
+        CYPRESS_BASE_URL: "http://flashhost/${{ github.event.inputs.target }}/"
+
+    - name: ⬆ Upload screenshots
+      uses: actions/upload-artifact@v1
+      if: failure()
+      with:
+        name: cypress-screenshots
+        path: OctoPrint/tests/cypress/screenshots
+
+    - name: ⬆ Upload videos
+      uses: actions/upload-artifact@v1
+      if: always()
+      with:
+        name: cypress-videos
+        path: OctoPrint/tests/cypress/videos
