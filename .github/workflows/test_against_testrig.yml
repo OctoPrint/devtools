@@ -77,7 +77,7 @@ jobs:
       run: |
         IMAGE="${{ env.IMAGE }}"
         if [[ "$IMAGE" == github-run-* ]]
-        do
+        then
           ssh fab@flashhost flashhost_remove_image:$IMAGE
         fi
 
