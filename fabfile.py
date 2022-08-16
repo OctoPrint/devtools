@@ -598,6 +598,30 @@ def flashhost_list_images():
             continue
         print("  {}".format(f[len("octopi-"):-len(".img")]))
 
+@task
+@hosts("pi@flashhost.lan")
+def flashhost_fetch_image(url, image):
+    """downloads image from url to flashhost images directory"""
+    path = env.flashhost["images"]
+    tmp_path = path + "/tmp"
+
+    if files.exists("{}/octopi-{}.img".format(path, image)):
+        abort("Image {} already exists".format(image))
+
+    run("wget {} -O {}/{}.zip".format(url, tmp_path, image))
+    run("unzip {}/{}.zip -d {}".format(tmp_path, image, tmp_path))
+    run("rm {}/{}.zip".format(tmp_path, image))
+
+    unpacked = run("ls {}/*.img | head -n 1".format(tmp_path), quiet=True).split("\n")[0]
+    run("mv {} {}/octopi-{}.img".format(unpacked, path, image))
+
+@task
+@hosts("pi@flashhost.lan")
+def flashhost_remove_image(image):
+    """removes image from flashhost images directory"""
+    path = env.flashhost["images"]
+    run("rm {}/octopi-{}.img".format(path, image))
+
 ##~~ OctoPi ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
