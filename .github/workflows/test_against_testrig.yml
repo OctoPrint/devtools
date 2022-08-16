@@ -76,7 +76,10 @@ jobs:
       if: always()
       run: |
         IMAGE="${{ env.IMAGE }}"
-        [[ "$IMAGE" == "github-run-*" ]] && ssh fab@flashhost flashhost_remove_image:$IMAGE
+        if [[ "$IMAGE" == github-run-* ]]
+        do
+          ssh fab@flashhost flashhost_remove_image:$IMAGE
+        fi
 
   e2e:
     name: "🧪 E2E"
