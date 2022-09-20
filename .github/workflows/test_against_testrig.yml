@@ -70,7 +70,7 @@ jobs:
       env:
         TARGET: ${{ github.event.inputs.target }}
       run: |
-        ssh -o SendEnv=TARGET fab@flashhost octopi_test_provisioned:headless=1
+        ssh -o SendEnv=TARGET fab@flashhost octopi_test_provisioned:headless=1,config=configs/e2e
 
     - name: "🧹 Clean up if needed"
       if: always()
