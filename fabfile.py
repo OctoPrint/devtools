@@ -558,6 +558,19 @@ def flashhost_dut(target=None):
 
 @task
 @hosts("pi@flashhost.lan")
+def flashhost_dutstate(target=None):
+    """switches target to DUT mode (USB-SD-MUX DUT & powered on)"""
+    if target is None:
+        target = env.target
+    if not target in env.targets:
+        abort("Unknown target: {}".format(target))
+    usbport = env.targets[target]["usbport"]
+
+    sudo("{} -g {}".format(env.flashhost["ykush"], usbport))
+
+
+@task
+@hosts("pi@flashhost.lan")
 def flashhost_reboot(target=None):
     """powers target off and on again"""
     if target is None:
