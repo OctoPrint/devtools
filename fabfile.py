@@ -272,21 +272,11 @@ def venv_executable(venv, executable):
         return "{}/bin/{}".format(venv, executable)
 
 
-def test_install(tag, python, target="wheel"):
-    # test local install of tag against python version and wheel/sdist
-    if tag is None:
-        tag = env.tag
-
-    if tag is None:
-        abort("Tag needs to be set")
-
+def test_install(installable, python, target="wheel"):
     basedir = "testconf-dist"
     venv = "venv-dist"
 
     with lcd(env.octoprint):
-        if not os.path.exists(os.path.join("dist", "OctoPrint-{}.tar.gz".format(tag))):
-            local("{} setup.py sdist bdist_wheel".format(sys.executable))
-
         local("rm -rf {} || true".format(venv))
         local("rm -rf {} || true".format(basedir))
 
@@ -295,18 +285,11 @@ def test_install(tag, python, target="wheel"):
                 env.python37, getattr(env, python), venv
             )
         )
-        if target == "wheel":
-            local(
-                "{} -m pip install dist/OctoPrint-{}-py2.py3-none-any.whl".format(
-                    venv_executable(venv, "python"), tag
-                )
+        local(
+            "{} -m pip install {}".format(
+                venv_executable(venv, "python"), installable
             )
-        elif target == "sdist":
-            local(
-                "{} -m pip install dist/OctoPrint-{}.tar.gz".format(
-                    venv_executable(venv, "python"), tag
-                )
-            )
+        )
 
         local(
             "{} serve --debug --basedir {} --port 5001".format(
@@ -315,16 +298,44 @@ def test_install(tag, python, target="wheel"):
         )
 
 
+def test_local(tag, python, target="wheel"):
+    # test local install of tag against python version and wheel/sdist
+    if tag is None:
+        tag = env.tag
+
+    if tag is None:
+        abort("Tag needs to be set")
+
+    with lcd(env.octoprint):
+        if not os.path.exists(os.path.join("dist", "OctoPrint-{}.tar.gz".format(tag))):
+            local("{} setup.py sdist bdist_wheel".format(sys.executable))
+
+    if target == "wheel":
+        installable = "dist/OctoPrint-{}-py2.py3-none-any.whl".format(tag)
+    elif target == "sdist":
+        installable = "dist/OctoPrint-{}.tar.gz".format(tag)
+    else:
+        abort("Unknown target {}".format(target))
+        return
+
+    test_install(installable, python)
+
 @task
 def test_sdist(python, tag=None):
     """test sdist install of tag against python version"""
-    test_install(tag, python, target="sdist")
+    test_local(tag, python, target="sdist")
 
 
 @task
 def test_wheel(python, tag=None):
     """test wheel install of tag against python version"""
-    test_install(tag, python, target="wheel")
+    test_local(tag, python, target="wheel")
+
+
+@task
+def test_version(version, python="python37"):
+    """test install of version against python version"""
+    test_install("OctoPrint=={}".format(version), python)
 
 
 ##~~ FlashHost ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
