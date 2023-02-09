@@ -113,14 +113,14 @@ jobs:
         CYPRESS_BASE_URL: "http://flashhost/${{ github.event.inputs.target }}/"
 
     - name: ⬆ Upload screenshots
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: cypress-screenshots
         path: OctoPrint/tests/cypress/screenshots
 
     - name: ⬆ Upload videos
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       if: always()
       with:
         name: cypress-videos
