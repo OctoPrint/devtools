@@ -496,7 +496,7 @@ def flashhost_provision_firstrun(target, boot):
 
 @task
 @hosts("pi@flashhost.lan")
-def flashhost_provision(target=None, firstrun=False):
+def flashhost_provision(target=None, firstrun=True):
     """provisions target with wifi, hostname, password and boot_delay"""
     if target is None:
         target = env.target
@@ -599,7 +599,7 @@ def flashhost_reboot(target=None):
 
 @task
 @hosts("pi@flashhost.lan")
-def flashhost_flash_and_provision(version, target=None, firstrun=False):
+def flashhost_flash_and_provision(version, target=None, firstrun=True):
     """runs flash & provision cycle on target for specified OctoPi version"""
     if target is None:
         target = env.target
