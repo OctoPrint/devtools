@@ -27,6 +27,14 @@ jobs:
       image: ${{ env.IMAGE }}
 
     steps:
+    - name: "🧥 Cloak some stuff"
+      env:
+        TESTRIG_WIFI_NAME: ${{ secrets.TESTRIG_WIFI_NAME }}
+        TESTRIG_WIFI_KEY: ${{ secrets.TESTRIG_WIFI_KEY }}
+      run: |
+        echo "::add-mask::$TESTRIG_WIFI_NAME"
+        echo "::add-mask::$TESTRIG_WIFI_KEY"
+
     - name: "🔑 Install SSH key in agent"
       uses: shimataro/ssh-key-action@v2
       with:
