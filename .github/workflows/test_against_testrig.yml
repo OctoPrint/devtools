@@ -98,30 +98,63 @@ jobs:
         tailscale status
         curl http://flashhost/${{ github.event.inputs.target }}/
 
-    - name: "⬇ Checkout latest OctoPrint"
+    - name: "⬇ Checkout maintenance OctoPrint with Playwright E2E tests"
       uses: actions/checkout@v3
       with:
         repository: OctoPrint/OctoPrint
+        ref: maintenance
         path: OctoPrint
 
-    - name: 🚀 Run Cypress
-      uses: cypress-io/github-action@v2
+    - name: 🏗 Prepare Playwright env
+      working-directory: OctoPrint/tests/playwright
+      run: |
+        npm ci
+        PLAYWRIGHT_VERSION=$(npm ls --json @playwright/test | jq --raw-output '.dependencies["@playwright/test"].version')
+        echo "PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION" >> $GITHUB_ENV
+
+    - name: 🧰 Cache Playwright browser binaries
+      uses: actions/cache@v3
+      id: playwright-cache
       with:
-        working-directory: OctoPrint/tests/cypress
-        browser: chrome
+        path: "~/.cache/ms-playwright"
+        key: "${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}"
+        restore-keys: |
+          ${{ runner.os }}-playwright-
+
+    - name: 🏗 Install Playwright browser binaries & OS dependencies
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      working-directory: OctoPrint/tests/playwright
+      run: |
+        npx playwright install --with-deps
+
+    - name: 🏗 Install Playwright OS dependencies
+      if: steps.playwright-cache.outputs.cache-hit == 'true'
+      working-directory: OctoPrint/tests/playwright
+      run: |
+        npx playwright install-deps
+
+    - name: 🎭 Run Playwright
+      working-directory: OctoPrint/tests/playwright
+      run: |
+        npx playwright test
       env:
-        CYPRESS_BASE_URL: "http://flashhost/${{ github.event.inputs.target }}/"
+        OCTOPRINT_SERVER_BASE: ${{ github.workspace }}/e2econfig
+        PLAYWRIGHT_BASEURL: "http://flashhost/${{ github.event.inputs.target }}"
 
-    - name: ⬆ Upload screenshots
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: cypress-screenshots
-        path: OctoPrint/tests/cypress/screenshots
+    - name: 📷 Check webcam
+      run: |
+        curl -i -o webcam.jpg http://flashhost/${{ github.event.inputs.target }}/webcam/?action=snapshot
 
-    - name: ⬆ Upload videos
+    - name: ⬆ Upload Playwright report
       uses: actions/upload-artifact@v3
       if: always()
       with:
-        name: cypress-videos
-        path: OctoPrint/tests/cypress/videos
+        name: playwright-report
+        path: OctoPrint/tests/playwright/playwright-report
+
+    - name: ⬆ Upload OctoPrint logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: octoprint-logs
+        path: ${{ github.workspace }}/e2econfig/logs
