@@ -12,7 +12,7 @@ on:
       target:
         description: "Target DUT to deploy to"
         required: true
-        default: 'pia'
+        default: 'pic'
       image:
         description: "Image to deploy"
         required: false
