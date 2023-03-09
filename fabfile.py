@@ -52,6 +52,7 @@ env.no_keys = True
 
 env.target = os.environ.get("TARGET", None)
 env.tag = os.environ.get("TAG", None)
+env.rpi_user = os.environ.get("RPI_USER", env.rpi_user)
 
 
 def dict_merge(a, b, leaf_merger=None):
@@ -417,7 +418,10 @@ def flashhost_flash(version, target=None):
 
 def flashhost_provision_octopi(target, boot):
     hostname = env.targets[target]["hostname"]
-    password = env.password
+    password = env.rpi_password
+
+    if env.rpi_user != "pi":
+        abort("Legacy provisioning only supports pi user")
 
     files.upload_template(
         "octopi-wpa-supplicant.txt",
@@ -464,8 +468,8 @@ def flashhost_provision_firstrun(target, boot):
     from passlib.hash import sha512_crypt
 
     hostname = env.targets[target]["hostname"]
-    user = env.targets[target].get("user", "pi")
-    password = env.password
+    user = env.rpi_user
+    password = env.rpi_password
 
     passwordhash = sha512_crypt.using(rounds=5000).hash(password)
 
@@ -974,9 +978,9 @@ def octopi_wait(target=None, headless=False):
         if not target in env.targets:
             abort("Unknown target: {}".format(target))
         host = "{}.lan".format(env.targets[target]["hostname"])
-        host_string = "{}@{}".format(env.user, host)
+        host_string = "{}@{}".format(env.rpi_user, host)
 
-    with settings(host_string=host_string, host=host):
+    with settings(host_string=host_string, host=host, password=env.rpi_password):
         octopi_await_ntp()
         octopi_await_server()
         if not headless:
@@ -1002,9 +1006,9 @@ def octopi_test_simplepip(tag=None, target=None, pip=None, packages=None, fixes=
         if not target in env.targets:
             abort("Unknown target: {}".format(target))
         host = "{}.lan".format(env.targets[target]["hostname"])
-        host_string = "{}@{}".format(env.user, host)
+        host_string = "{}@{}".format(env.rpi_user, host)
 
-    with settings(host_string=host_string, host=host):
+    with settings(host_string=host_string, host=host, password=env.rpi_password):
         octopi_await_ntp()
         url = "{}/archive/{}.zip".format(env.releasetest_repo, tag)
         octopi_install(url)
@@ -1035,9 +1039,9 @@ def octopi_test_clean(version=None, target=None, pip=None, packages=None, fixes=
         if not target in env.targets:
             abort("Unknown target: {}".format(target))
         host = "{}.lan".format(env.targets[target]["hostname"])
-        host_string = "{}@{}".format(env.user, host)
+        host_string = "{}@{}".format(env.rpi_user, host)
 
-    with settings(host_string=host_string, host=host):
+    with settings(host_string=host_string, host=host, password=env.rpi_password):
         octopi_await_ntp()
         if version or pip:
             octopi_octoservice("stop")
@@ -1069,9 +1073,9 @@ def octopi_test_provisioned(version=None, config="configs/with_acl", target=None
         if not target in env.targets:
             abort("Unknown target: {}".format(target))
         host = "{}.lan".format(env.targets[target]["hostname"])
-        host_string = "{}@{}".format(env.user, host)
+        host_string = "{}@{}".format(env.rpi_user, host)
 
-    with settings(host_string=host_string, host=host):
+    with settings(host_string=host_string, host=host, password=env.rpi_password):
         octopi_await_ntp()
         octopi_provision(config=config, version=version, pip=pip, packages=packages, fixes=fixes, releasetest=True, headless=True)
         octopi_await_server()
@@ -1100,9 +1104,9 @@ def octopi_test_update(channel, branch, version=None, tag=None, prerelease=False
         if not target in env.targets:
             abort("Unknown target: {}".format(target))
         host = "{}.lan".format(env.targets[target]["hostname"])
-        host_string = "{}@{}".format(env.user, host)
+        host_string = "{}@{}".format(env.rpi_user, host)
 
-    with settings(host_string=host_string, host=host):
+    with settings(host_string=host_string, host=host, password=env.rpi_password):
         octopi_await_ntp()
         octopi_provision(config, version=version, release_channel=channel, pip=pip, packages=packages, fixes=fixes, restart=False, releasetest=True, headless=True)
         octopi_test_releasepatch_octoprint(tag, branch, prerelease)
@@ -1126,9 +1130,9 @@ def octopi_test_filecheck(tag, target=None, headless=False):
         if not target in env.targets:
             abort("Unknown target: {}".format(target))
         host = "{}.lan".format(env.targets[target]["hostname"])
-        host_string = "{}@{}".format(env.user, host)
+        host_string = "{}@{}".format(env.rpi_user, host)
 
-    with settings(host_string=host_string, host=host):
+    with settings(host_string=host_string, host=host, password=env.rpi_password):
         octopi_releasetestplugin_github_release_patcher()
         octopi_test_releasepatch_filecheck(tag)
         octopi_octoservice("restart")
@@ -1151,9 +1155,9 @@ def octopi_test_firmwarecheck(tag, target=None, headless=False):
         if not target in env.targets:
             abort("Unknown target: {}".format(target))
         host = "{}.lan".format(env.targets[target]["hostname"])
-        host_string = "{}@{}".format(env.user, host)
+        host_string = "{}@{}".format(env.rpi_user, host)
 
-    with settings(host_string=host_string, host=host):
+    with settings(host_string=host_string, host=host, password=env.rpi_password):
         octopi_releasetestplugin_github_release_patcher()
         octopi_test_releasepatch_firmwarecheck(tag)
         octopi_octoservice("restart")

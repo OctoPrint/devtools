@@ -1,5 +1,5 @@
-user: <rpi user>
-password: <rpi password>
+rpi_user: <rpi user>
+rpi_password: <rpi password>
 
 wifi_ssid: <ssid>
 wifi_psk: <password>
