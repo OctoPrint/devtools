@@ -42,7 +42,7 @@ jobs:
         known_hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
 
     - name: "🌐 Connect to tailscale network"
-      uses: tailscale/github-action@v1
+      uses: tailscale/github-action@v2
       with:
         authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
@@ -96,7 +96,7 @@ jobs:
     steps:
 
     - name: "🌐 Connect to tailscale network"
-      uses: tailscale/github-action@v1
+      uses: tailscale/github-action@v2
       with:
         authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
