@@ -140,11 +140,10 @@ def get_comparable_version(version_string, cut=None, **kwargs):
             parts = version.base_version.split(".")
             if 0 < cut < len(parts):
                 reduced = parts[:-cut]
-                version = pkg_resources.parse_version(
-                    ".".join(str(x) for x in reduced)
-                )
+                version = pkg_resources.parse_version(".".join(str(x) for x in reduced))
 
     return version
+
 
 ##~~ Release testing ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -214,15 +213,8 @@ def test_rc_maintenance(tag=None, force=False):
 
 @task
 def test_stable(tag=None, force=False):
-    """prep stable release on testrepo"""
-    test_rc_maintenance(tag=tag, force=force)
-    merge_push_test_repo("master", "rc/maintenance")
-    merge_push_test_repo("rc/devel", "rc/maintenance")
+    """prep stable release on testrepo (from staging/bugfix)"""
 
-
-@task
-def test_bugfix(tag=None, force=False):
-    """prep bugfix release on testrepo"""
     if tag is None:
         tag = env.tag
 
@@ -281,16 +273,8 @@ def test_install(installable, python, target="wheel"):
         local("rm -rf {} || true".format(venv))
         local("rm -rf {} || true".format(basedir))
 
-        local(
-            "{} -m virtualenv --python={} {}".format(
-                env.python37, getattr(env, python), venv
-            )
-        )
-        local(
-            "{} -m pip install {}".format(
-                venv_executable(venv, "python"), installable
-            )
-        )
+        local("{} -m venv {}".format(getattr(env, python), venv))
+        local("{} -m pip install {}".format(venv_executable(venv, "python"), installable))
 
         local(
             "{} serve --debug --basedir {} --port 5001".format(
@@ -320,6 +304,7 @@ def test_local(tag, python, target="wheel"):
         return
 
     test_install(installable, python)
+
 
 @task
 def test_sdist(python, tag=None):
@@ -357,9 +342,11 @@ def boot_part_device(serial):
         format_serial(serial)
     )
 
+
 def mqtt_annotate(target, text):
     if env.flashhost.get("mqtt_annotation"):
-        run("{} {} \"{}\"".format(env.flashhost["mqtt_annotation"], target, text))
+        run('{} {} "{}"'.format(env.flashhost["mqtt_annotation"], target, text))
+
 
 def read_file(path):
     fd = BytesIO()
@@ -370,6 +357,7 @@ def read_file(path):
     finally:
         fd.close()
 
+
 def write_file(path, data, use_sudo=False):
     fd = BytesIO()
     try:
@@ -379,11 +367,13 @@ def write_file(path, data, use_sudo=False):
     finally:
         fd.close()
 
+
 def print_file(path):
     print("-" * len(path))
     print(path)
     print("-" * len(path))
     print(read_file(path).decode("utf-8"))
+
 
 @task
 @hosts("pi@flashhost.lan")
@@ -464,6 +454,7 @@ def flashhost_provision_octopi(target, boot):
         use_sudo=True,
     )
 
+
 def flashhost_provision_firstrun(target, boot):
     from passlib.hash import sha512_crypt
 
@@ -497,6 +488,7 @@ def flashhost_provision_firstrun(target, boot):
         cmdline += b" systemd.run=/boot/firstrun.sh systemd.run_success_action=reboot systemd.unit=kernel-command-line.target"
         write_file(boot + "/cmdline.txt", cmdline, use_sudo=True)
         print_file(boot + "/cmdline.txt")
+
 
 @task
 @hosts("pi@flashhost.lan")
@@ -615,6 +607,7 @@ def flashhost_flash_and_provision(version, target=None, firstrun=True):
     flashhost_provision(target=target, firstrun=firstrun)
     flashhost_dut(target=target)
 
+
 @task
 @hosts("pi@flashhost.lan")
 def flashhost_list_images():
@@ -624,7 +617,8 @@ def flashhost_list_images():
         f = f.strip()
         if not f.startswith("octopi-") or not f.endswith(".img"):
             continue
-        print("  {}".format(f[len("octopi-"):-len(".img")]))
+        print("  {}".format(f[len("octopi-") : -len(".img")]))
+
 
 @task
 @hosts("pi@flashhost.lan")
@@ -643,12 +637,14 @@ def flashhost_fetch_image(url, image):
     unpacked = run("ls {}/*.img | head -n 1".format(tmp_path), quiet=True).split("\n")[0]
     run("mv {} {}/octopi-{}.img".format(unpacked, path, image))
 
+
 @task
 @hosts("pi@flashhost.lan")
 def flashhost_remove_image(image):
     """removes image from flashhost images directory"""
     path = env.flashhost["images"]
     run("rm {}/octopi-{}.img".format(path, image))
+
 
 ##~~ OctoPi ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -759,11 +755,7 @@ def octopi_standardrepo():
 def octopi_releasetestrepo():
     """set releasetest repo"""
     if files.exists("~/OctoPrint/.git"):
-        run(
-            "cd ~/OctoPrint && git remote set-url origin {}".format(
-                env.releasetest_repo
-            )
-        )
+        run("cd ~/OctoPrint && git remote set-url origin {}".format(env.releasetest_repo))
 
 
 @task
@@ -898,7 +890,17 @@ def octopi_await_server(timeout=300):
 
 
 @task
-def octopi_provision(config="configs/with_acl", version=None, release_channel=None, pip=None, packages=None, fixes=None, restart=True, releasetest=False, headless=False):
+def octopi_provision(
+    config="configs/with_acl",
+    version=None,
+    release_channel=None,
+    pip=None,
+    packages=None,
+    fixes=None,
+    restart=True,
+    releasetest=False,
+    headless=False,
+):
     """provisions instance: start version, config, release channel, release patcher"""
     octopi_octoservice("stop")
     if version is not None:
@@ -943,9 +945,7 @@ def octopi_provision(config="configs/with_acl", version=None, release_channel=No
                 plugins=dict(
                     softwareupdate=dict(
                         checks=dict(
-                            octoprint=dict(
-                                prerelease=False, prerelease_channel="stable"
-                            )
+                            octoprint=dict(prerelease=False, prerelease_channel="stable")
                         )
                     )
                 )
@@ -989,7 +989,9 @@ def octopi_wait(target=None, headless=False):
 
 
 @task
-def octopi_test_simplepip(tag=None, target=None, pip=None, packages=None, fixes=None, headless=False):
+def octopi_test_simplepip(
+    tag=None, target=None, pip=None, packages=None, fixes=None, headless=False
+):
     """tests simple pip install of tag"""
     if tag is None:
         tag = env.tag
@@ -1029,7 +1031,9 @@ def octopi_test_simplepip(tag=None, target=None, pip=None, packages=None, fixes=
 
 
 @task
-def octopi_test_clean(version=None, target=None, pip=None, packages=None, fixes=None, headless=False):
+def octopi_test_clean(
+    version=None, target=None, pip=None, packages=None, fixes=None, headless=False
+):
     if target is None:
         target = env.target
 
@@ -1062,8 +1066,17 @@ def octopi_test_clean(version=None, target=None, pip=None, packages=None, fixes=
             webbrowser.open("http://{}".format(env.host))
             octopi_tailoctolog()
 
+
 @task
-def octopi_test_provisioned(version=None, config="configs/with_acl", target=None, pip=None, packages=None, fixes=None, headless=False):
+def octopi_test_provisioned(
+    version=None,
+    config="configs/with_acl",
+    target=None,
+    pip=None,
+    packages=None,
+    fixes=None,
+    headless=False,
+):
     if target is None:
         target = env.target
 
@@ -1077,14 +1090,34 @@ def octopi_test_provisioned(version=None, config="configs/with_acl", target=None
 
     with settings(host_string=host_string, host=host, password=env.rpi_password):
         octopi_await_ntp()
-        octopi_provision(config=config, version=version, pip=pip, packages=packages, fixes=fixes, releasetest=True, headless=True)
+        octopi_provision(
+            config=config,
+            version=version,
+            pip=pip,
+            packages=packages,
+            fixes=fixes,
+            releasetest=True,
+            headless=True,
+        )
         octopi_await_server()
         if not headless:
             webbrowser.open("http://{}".format(env.host))
             octopi_tailoctolog()
 
 
-def octopi_test_update(channel, branch, version=None, tag=None, prerelease=False, config="configs/with_acl", target=None, pip=None, packages=None, fixes=None, headless=False):
+def octopi_test_update(
+    channel,
+    branch,
+    version=None,
+    tag=None,
+    prerelease=False,
+    config="configs/with_acl",
+    target=None,
+    pip=None,
+    packages=None,
+    fixes=None,
+    headless=False,
+):
     """
     generic update test prep: wait for server, provision, apply
     release patch, restart, open browser and tail log
@@ -1108,7 +1141,17 @@ def octopi_test_update(channel, branch, version=None, tag=None, prerelease=False
 
     with settings(host_string=host_string, host=host, password=env.rpi_password):
         octopi_await_ntp()
-        octopi_provision(config, version=version, release_channel=channel, pip=pip, packages=packages, fixes=fixes, restart=False, releasetest=True, headless=True)
+        octopi_provision(
+            config,
+            version=version,
+            release_channel=channel,
+            pip=pip,
+            packages=packages,
+            fixes=fixes,
+            restart=False,
+            releasetest=True,
+            headless=True,
+        )
         octopi_test_releasepatch_octoprint(tag, branch, prerelease)
         octopi_octoservice("restart")
 
@@ -1170,23 +1213,83 @@ def octopi_test_firmwarecheck(tag, target=None, headless=False):
 
 @task
 def octopi_test_update_devel(
-    channel, tag=None, version=None, pip=None, packages=None, fixes=None, config="configs/with_acl", target=None, headless=False
+    channel,
+    tag=None,
+    version=None,
+    pip=None,
+    packages=None,
+    fixes=None,
+    config="configs/with_acl",
+    target=None,
+    headless=False,
 ):
     """tests update procedure for devel RCs"""
-    octopi_test_update(channel, "rc/devel", version=version, tag=tag, prerelease=True, config=config, target=target, pip=pip, packages=packages, fixes=fixes, headless=headless)
+    octopi_test_update(
+        channel,
+        "rc/devel",
+        version=version,
+        tag=tag,
+        prerelease=True,
+        config=config,
+        target=target,
+        pip=pip,
+        packages=packages,
+        fixes=fixes,
+        headless=headless,
+    )
 
 
 @task
 def octopi_test_update_maintenance(
-    channel, tag=None, version=None, pip=None, packages=None, fixes=None, config="configs/with_acl", target=None, headless=False
+    channel,
+    tag=None,
+    version=None,
+    pip=None,
+    packages=None,
+    fixes=None,
+    config="configs/with_acl",
+    target=None,
+    headless=False,
 ):
     """tests update procedure for maintenance RCs"""
-    octopi_test_update(channel, "rc/maintenance", version=version, tag=tag, prerelease=True, config=config, target=target, pip=pip, packages=packages, fixes=fixes, headless=headless)
+    octopi_test_update(
+        channel,
+        "rc/maintenance",
+        version=version,
+        tag=tag,
+        prerelease=True,
+        config=config,
+        target=target,
+        pip=pip,
+        packages=packages,
+        fixes=fixes,
+        headless=headless,
+    )
 
 
 @task
 def octopi_test_update_stable(
-    channel, tag=None, version=None, pip=None, packages=None, fixes=None, config="configs/with_acl", target=None, headless=False
+    channel,
+    tag=None,
+    version=None,
+    pip=None,
+    packages=None,
+    fixes=None,
+    config="configs/with_acl",
+    target=None,
+    headless=False,
 ):
     """tests update procedure for stable releases"""
-    octopi_test_update(channel, "master", version=version, tag=tag, prerelease=False, config=config, target=target, pip=pip, packages=packages, fixes=fixes, headless=headless)
+    octopi_test_update(
+        channel,
+        "master",
+        version=version,
+        tag=tag,
+        prerelease=False,
+        config=config,
+        target=target,
+        pip=pip,
+        packages=packages,
+        fixes=fixes,
+        headless=headless,
+    )
