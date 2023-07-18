@@ -14,6 +14,7 @@ plugins:
     enabled: true
 server:
   firstRun: false
+  incompleteStartup: false
   onlineCheck:
     enabled: false
   pluginBlacklist:

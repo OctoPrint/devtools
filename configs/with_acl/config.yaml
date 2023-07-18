@@ -7,6 +7,7 @@ plugins:
         enabled: false
 server:
     firstRun: false
+    incompleteStartup: false
     onlineCheck:
         enabled: false
     pluginBlacklist:

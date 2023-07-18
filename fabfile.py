@@ -903,6 +903,8 @@ def octopi_provision(
 ):
     """provisions instance: start version, config, release channel, release patcher"""
     octopi_octoservice("stop")
+    run("rm .octoprint/.incomplete_startup")
+
     if version is not None:
         octopi_patch_python_env()
         octopi_install("OctoPrint=={}".format(version))
