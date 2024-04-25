@@ -199,13 +199,13 @@ def test_branch(release_branch, prep_branch, dev_branch, tag=None, force=False):
 
 @task
 def test_rc_devel(tag=None, force=False):
-    """prep devel rc on testrepo"""
+    """prep devel rc on testrepo (from staging/devel)"""
     test_branch("rc/devel", "staging/devel", "devel", tag=tag, force=force)
 
 
 @task
 def test_rc_maintenance(tag=None, force=False):
-    """prep maintenance rc on testrepo"""
+    """prep maintenance rc on testrepo (from staging/maintenance)"""
     test_branch(
         "rc/maintenance", "staging/maintenance", "maintenance", tag=tag, force=force
     )
@@ -213,7 +213,20 @@ def test_rc_maintenance(tag=None, force=False):
 
 @task
 def test_stable(tag=None, force=False):
-    """prep stable release on testrepo (from staging/bugfix)"""
+    """prep stable release on testrepo (from staging/maintenance)"""
+
+    if tag is None:
+        tag = env.tag
+
+    if tag is None:
+        abort("Tag needs to be set")
+
+    merge_tag_push_test_repo("master", "staging/maintenance", tag, force=force)
+
+
+@task
+def test_bugfix(tag=None, force=False):
+    """prep bugfix release on testrepo (from staging/bugfix)"""
 
     if tag is None:
         tag = env.tag
@@ -274,7 +287,9 @@ def test_install(installable, python, target="wheel"):
         local("rm -rf {} || true".format(basedir))
 
         local("{} -m venv {}".format(getattr(env, python), venv))
-        local("{} -m pip install {}".format(venv_executable(venv, "python"), installable))
+        local(
+            "{} -m pip install {}".format(venv_executable(venv, "python"), installable)
+        )
 
         local(
             "{} serve --debug --basedir {} --port 5001".format(
@@ -634,7 +649,9 @@ def flashhost_fetch_image(url, image):
     run("unzip {}/{}.zip -d {}".format(tmp_path, image, tmp_path))
     run("rm {}/{}.zip".format(tmp_path, image))
 
-    unpacked = run("ls {}/*.img | head -n 1".format(tmp_path), quiet=True).split("\n")[0]
+    unpacked = run("ls {}/*.img | head -n 1".format(tmp_path), quiet=True).split("\n")[
+        0
+    ]
     run("mv {} {}/octopi-{}.img".format(unpacked, path, image))
 
 
@@ -755,7 +772,11 @@ def octopi_standardrepo():
 def octopi_releasetestrepo():
     """set releasetest repo"""
     if files.exists("~/OctoPrint/.git"):
-        run("cd ~/OctoPrint && git remote set-url origin {}".format(env.releasetest_repo))
+        run(
+            "cd ~/OctoPrint && git remote set-url origin {}".format(
+                env.releasetest_repo
+            )
+        )
 
 
 @task
@@ -882,7 +903,7 @@ def octopi_await_server(timeout=300):
             if r.status_code == 200:
                 print("OctoPrint is up at http://{}".format(env.host))
                 break
-        except:
+        except Exception:
             pass
 
         print(".", end="")
@@ -903,7 +924,7 @@ def octopi_provision(
 ):
     """provisions instance: start version, config, release channel, release patcher"""
     octopi_octoservice("stop")
-    run("rm .octoprint/.incomplete_startup")
+    run("rm .octoprint/.incomplete_startup || true")
 
     if version is not None:
         octopi_patch_python_env()
@@ -914,6 +935,9 @@ def octopi_provision(
 
     if packages:
         for package in packages.split("|"):
+            if "/" in package:
+                package, version = package.split("/")
+                package = "{}=={}".format(package, version)
             octopi_install(package)
 
     if fixes:
@@ -947,7 +971,9 @@ def octopi_provision(
                 plugins=dict(
                     softwareupdate=dict(
                         checks=dict(
-                            octoprint=dict(prerelease=False, prerelease_channel="stable")
+                            octoprint=dict(
+                                prerelease=False, prerelease_channel="stable"
+                            )
                         )
                     )
                 )
