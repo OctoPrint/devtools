@@ -3,8 +3,12 @@
 set +e
 
 CURRENT_HOSTNAME=`cat /etc/hostname | tr -d " \t\n\r"`
-echo {{ hostname }} >/etc/hostname
-sed -i "s/127.0.1.1.*$CURRENT_HOSTNAME/127.0.1.1\t{{ hostname }}/g" /etc/hosts
+if [ -f /usr/lib/raspberrypi-sys-mods/imager_custom ]; then
+   /usr/lib/raspberrypi-sys-mods/imager_custom set_hostname {{ hostname }}
+else
+   echo {{ hostname }} >/etc/hostname
+   sed -i "s/127.0.1.1.*$CURRENT_HOSTNAME/127.0.1.1\t{{ hostname }}/g" /etc/hosts
+fi
 
 FIRSTUSER=`getent passwd 1000 | cut -d: -f1`
 FIRSTUSERHOME=`getent passwd 1000 | cut -d: -f6`
@@ -28,7 +32,10 @@ else
    fi
 fi
 
-cat >/etc/wpa_supplicant/wpa_supplicant.conf <<'WPAEOF'
+if [ -f /usr/lib/raspberrypi-sys-mods/imager_custom ]; then
+   /usr/lib/raspberrypi-sys-mods/imager_custom set_wlan '{{ ssid }}' '{{ psk }}' '{{ country }}'
+else
+   cat >/etc/wpa_supplicant/wpa_supplicant.conf <<'WPAEOF'
 country={{ country }}
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 ap_scan=1
@@ -40,11 +47,12 @@ network={
 }
 
 WPAEOF
-chmod 600 /etc/wpa_supplicant/wpa_supplicant.conf
-rfkill unblock wifi
-for filename in /var/lib/systemd/rfkill/*:wlan ; do
-  echo 0 > $filename
-done
+   chmod 600 /etc/wpa_supplicant/wpa_supplicant.conf
+   rfkill unblock wifi
+   for filename in /var/lib/systemd/rfkill/*:wlan ; do
+      echo 0 > $filename
+   done
+fi
 
 rm -f /boot/firstrun.sh
 sed -i 's| systemd.run.*||g' /boot/cmdline.txt
