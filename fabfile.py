@@ -400,14 +400,17 @@ def flashhost_release_lock():
 
 @task
 @hosts("pi@flashhost.lan")
-def flashhost_flash(version, target=None):
-    """flashes target with OctoPi image of provided version using dd"""
+def flashhost_flash(image, target=None):
+    """flashes target with OctoPi image of provided image using dd"""
     lockfile = env.flashhost["flashlock"]
-    imagefile = "{}/octopi-{}.img".format(env.flashhost["images"], version)
+
+    imagefile = "{}/{}.img".format(env.flashhost["images"], image)
+    if not files.exists(imagefile):
+        imagefile = "{}/octopi-{}.img".format(env.flashhost["images"], image)
 
     if target is None:
         target = env.target
-    if not target in env.targets:
+    if target not in env.targets:
         abort("Unknown target: {}".format(target))
     if not files.exists(imagefile):
         abort("Image not available: {}".format(imagefile))
@@ -511,7 +514,7 @@ def flashhost_provision(target=None, firstrun=True):
     """provisions target with wifi, hostname, password and boot_delay"""
     if target is None:
         target = env.target
-    if not target in env.targets:
+    if target not in env.targets:
         abort("Unknown target: {}".format(target))
 
     serial = env.targets[target]["serial"]
@@ -539,7 +542,7 @@ def flashhost_host(target=None):
     """switches target to Host mode (powered off & USB-SD-MUX Host)"""
     if target is None:
         target = env.target
-    if not target in env.targets:
+    if target not in env.targets:
         abort("Unknown target: {}".format(target))
     usbport = env.targets[target]["usbport"]
     serial = env.targets[target]["serial"]
@@ -561,7 +564,7 @@ def flashhost_dut(target=None):
     """switches target to DUT mode (USB-SD-MUX DUT & powered on)"""
     if target is None:
         target = env.target
-    if not target in env.targets:
+    if target not in env.targets:
         abort("Unknown target: {}".format(target))
     usbport = env.targets[target]["usbport"]
     serial = env.targets[target]["serial"]
@@ -584,7 +587,7 @@ def flashhost_dutstate(target=None):
     """switches target to DUT mode (USB-SD-MUX DUT & powered on)"""
     if target is None:
         target = env.target
-    if not target in env.targets:
+    if target not in env.targets:
         abort("Unknown target: {}".format(target))
     usbport = env.targets[target]["usbport"]
 
@@ -597,7 +600,7 @@ def flashhost_reboot(target=None):
     """powers target off and on again"""
     if target is None:
         target = env.target
-    if not target in env.targets:
+    if target not in env.targets:
         abort("Unknown target: {}".format(target))
     usbport = env.targets[target]["usbport"]
 
@@ -630,9 +633,13 @@ def flashhost_list_images():
     print("Available images:")
     for f in run("ls -1 {}".format(path), quiet=True).split("\n"):
         f = f.strip()
-        if not f.startswith("octopi-") or not f.endswith(".img"):
+        if not f.endswith(".img"):
             continue
-        print("  {}".format(f[len("octopi-") : -len(".img")]))
+
+        if f.startswith("octopi-"):
+            print("  {}".format(f[len("octopi-") : -len(".img")]))
+        else:
+            print("  {}".format(f[: -len(".img")]))
 
 
 @task
@@ -642,7 +649,7 @@ def flashhost_fetch_image(url, image):
     path = env.flashhost["images"]
     tmp_path = path + "/tmp"
 
-    if files.exists("{}/octopi-{}.img".format(path, image)):
+    if files.exists("{}/{}.img".format(path, image)):
         abort("Image {} already exists".format(image))
 
     run("wget {} -O {}/{}.zip".format(url, tmp_path, image))
@@ -652,15 +659,30 @@ def flashhost_fetch_image(url, image):
     unpacked = run("ls {}/*.img | head -n 1".format(tmp_path), quiet=True).split("\n")[
         0
     ]
-    run("mv {} {}/octopi-{}.img".format(unpacked, path, image))
+    run("mv {} {}/{}.img".format(unpacked, path, image))
 
 
 @task
 @hosts("pi@flashhost.lan")
-def flashhost_remove_image(image):
+def flashhost_remove_image(image, ignore_missing=False):
     """removes image from flashhost images directory"""
     path = env.flashhost["images"]
-    run("rm {}/octopi-{}.img".format(path, image))
+
+    imagepath = "{}/{}.img".format(path, image)
+    if files.exists(imagepath):
+        run("rm {}".format(imagepath))
+        return
+    
+    imagepath = "{}/octopi-{}.img".format(path, image)
+    if files.exists(imagepath):
+        run("rm {}".format(imagepath))
+        return
+
+    if ignore_missing:
+        return
+
+    abort("Image {} does not exist".format(image))
+    
 
 
 ##~~ OctoPi ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -878,7 +900,7 @@ def octopi_await_ntp(timeout=300):
 
         try:
             remote = run('date +"%Y%m%d"').strip()
-        except:
+        except Exception:
             pass
         else:
             local = datetime.date.today().strftime("%Y%m%d")
@@ -1003,7 +1025,7 @@ def octopi_wait(target=None, headless=False):
     host_string = env.host_string
     host = env.host
     if target:
-        if not target in env.targets:
+        if target not in env.targets:
             abort("Unknown target: {}".format(target))
         host = "{}.lan".format(env.targets[target]["hostname"])
         host_string = "{}@{}".format(env.rpi_user, host)
@@ -1033,7 +1055,7 @@ def octopi_test_simplepip(
     host_string = env.host_string
     host = env.host
     if target:
-        if not target in env.targets:
+        if target not in env.targets:
             abort("Unknown target: {}".format(target))
         host = "{}.lan".format(env.targets[target]["hostname"])
         host_string = "{}@{}".format(env.rpi_user, host)
@@ -1068,7 +1090,7 @@ def octopi_test_clean(
     host_string = env.host_string
     host = env.host
     if target:
-        if not target in env.targets:
+        if target not in env.targets:
             abort("Unknown target: {}".format(target))
         host = "{}.lan".format(env.targets[target]["hostname"])
         host_string = "{}@{}".format(env.rpi_user, host)
@@ -1111,7 +1133,7 @@ def octopi_test_provisioned(
     host_string = env.host_string
     host = env.host
     if target:
-        if not target in env.targets:
+        if target not in env.targets:
             abort("Unknown target: {}".format(target))
         host = "{}.lan".format(env.targets[target]["hostname"])
         host_string = "{}@{}".format(env.rpi_user, host)
@@ -1162,7 +1184,7 @@ def octopi_test_update(
     host_string = env.host_string
     host = env.host
     if target:
-        if not target in env.targets:
+        if target not in env.targets:
             abort("Unknown target: {}".format(target))
         host = "{}.lan".format(env.targets[target]["hostname"])
         host_string = "{}@{}".format(env.rpi_user, host)
@@ -1198,7 +1220,7 @@ def octopi_test_filecheck(tag, target=None, headless=False):
     host_string = env.host_string
     host = env.host
     if target:
-        if not target in env.targets:
+        if target not in env.targets:
             abort("Unknown target: {}".format(target))
         host = "{}.lan".format(env.targets[target]["hostname"])
         host_string = "{}@{}".format(env.rpi_user, host)
@@ -1223,7 +1245,7 @@ def octopi_test_firmwarecheck(tag, target=None, headless=False):
     host_string = env.host_string
     host = env.host
     if target:
-        if not target in env.targets:
+        if target not in env.targets:
             abort("Unknown target: {}".format(target))
         host = "{}.lan".format(env.targets[target]["hostname"])
         host_string = "{}@{}".format(env.rpi_user, host)
