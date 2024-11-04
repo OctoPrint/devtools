@@ -424,6 +424,13 @@ def flashhost_flash(image, target=None):
     )
 
 
+def encrypt_psk(ssid, psk):
+    from hashlib import pbkdf2_hmac
+    from binascii import hexlify
+
+    return hexlify(pbkdf2_hmac("sha1", str.encode(psk), str.encode(ssid), 4096, 32)).decode("utf-8")
+
+
 def flashhost_provision_octopi(target, boot):
     hostname = env.targets[target]["hostname"]
     password = env.rpi_password
@@ -490,7 +497,7 @@ def flashhost_provision_firstrun(target, boot):
             user=user,
             passwordhash=passwordhash,
             ssid=env.wifi_ssid,
-            psk=env.wifi_psk,
+            psk=encrypt_psk(env.wifi_ssid, env.wifi_psk),
             country=env.wifi_country,
         ),
         use_jinja=True,
