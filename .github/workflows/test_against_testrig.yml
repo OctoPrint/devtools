@@ -107,7 +107,7 @@ jobs:
     steps:
 
     - name: "🌐 Connect to tailscale network"
-      uses: tailscale/github-action@v1
+      uses: tailscale/github-action@v2
       with:
         authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
@@ -118,7 +118,7 @@ jobs:
         curl http://flashhost/${{ github.event.inputs.target }}/
 
     - name: "⬇ Checkout maintenance OctoPrint with Playwright E2E tests"
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: OctoPrint/OctoPrint
         ref: ${{ github.event.inputs.e2e-branch }}
@@ -132,7 +132,7 @@ jobs:
         echo "PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION" >> $GITHUB_ENV
 
     - name: 🧰 Cache Playwright browser binaries
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: playwright-cache
       with:
         path: "~/.cache/ms-playwright"
@@ -167,7 +167,7 @@ jobs:
         curl -i -o webcam.jpg http://flashhost/${{ github.event.inputs.target }}/webcam/?action=snapshot
 
     - name: ⬆ Upload Playwright report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: playwright-report
