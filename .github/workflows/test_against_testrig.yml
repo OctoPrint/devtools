@@ -4,8 +4,7 @@ run-name: ${{ inputs.run-name }}
 # Needed secrets:
 # - DEPLOY_KEY: private ssh key to access fab@flashhost.lan
 # - DEPLOY_KNOWN_HOSTS: known hosts including fab@flashhost.lan
-# - TAILSCALE_AUTHKEY: reusable, ephemeral, tagged tailscale auth key to access flashhost
-#   and DUTs
+# - TAILSCALE_OAUTH_CLIENT, TAILSCALE_OAUTH_SECRET: OAuth credentials for tailscale
 # - TESTRIG_WIFI_NAME, TESTRIG_WIFI_KEY, TESTRIG_WIFI_ENCKEY: wifi credentials to cloak
 
 on:
@@ -53,9 +52,11 @@ jobs:
         known_hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
 
     - name: "🌐 Connect to tailscale network"
-      uses: tailscale/github-action@v1
+      uses: tailscale/github-action@v2
       with:
-        authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+        oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT }}
+        oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+        tags: tag:github-runner
 
     - name: ✔ Check if tailscale is running
       run: |
@@ -109,7 +110,9 @@ jobs:
     - name: "🌐 Connect to tailscale network"
       uses: tailscale/github-action@v2
       with:
-        authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+        oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT }}
+        oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+        tags: tag:github-runner
 
     - name: ✔ Check if tailscale is running and make sure DUT is up
       run: |
