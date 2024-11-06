@@ -1,10 +1,12 @@
 name: "Test against testrig"
+run-name: ${{ inputs.run-name }}
 
 # Needed secrets:
 # - DEPLOY_KEY: private ssh key to access fab@flashhost.lan
 # - DEPLOY_KNOWN_HOSTS: known hosts including fab@flashhost.lan
 # - TAILSCALE_AUTHKEY: reusable, ephemeral, tagged tailscale auth key to access flashhost
 #   and DUTs
+# - TESTRIG_WIFI_NAME, TESTRIG_WIFI_KEY, TESTRIG_WIFI_ENCKEY: wifi credentials to cloak
 
 on:
   workflow_dispatch:
@@ -16,11 +18,14 @@ on:
       image:
         description: "Image to deploy"
         required: false
-        default: '0.18.0-latest'
+        default: '1.0.0-latest'
       e2e-branch:
         description: "Branch to run E2E tests from"
         required: false
         default: 'maintenance'
+      run-name:
+        description: "Distinct run-name to use"
+        required: false
 
 jobs:
   deploy:
@@ -35,9 +40,11 @@ jobs:
       env:
         TESTRIG_WIFI_NAME: ${{ secrets.TESTRIG_WIFI_NAME }}
         TESTRIG_WIFI_KEY: ${{ secrets.TESTRIG_WIFI_KEY }}
+        TESTRIG_WIFI_ENCKEY: ${{ secrets.TESTRIG_WIFI_ENCKEY }}
       run: |
         echo "::add-mask::$TESTRIG_WIFI_NAME"
         echo "::add-mask::$TESTRIG_WIFI_KEY"
+        echo "::add-mask::$TESTRIG_WIFI_ENCKEY"
 
     - name: "🔑 Install SSH key in agent"
       uses: shimataro/ssh-key-action@v2
