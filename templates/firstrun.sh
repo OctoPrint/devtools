@@ -43,7 +43,7 @@ ap_scan=1
 update_config=1
 network={
 	ssid="{{ ssid }}"
-	psk="{{ psk }}"
+	psk={{ psk }}
 }
 
 WPAEOF
