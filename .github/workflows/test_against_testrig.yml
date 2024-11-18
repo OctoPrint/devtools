@@ -62,6 +62,7 @@ jobs:
       run: |
         tailscale --version
         tailscale status
+        tailscale netcheck
         ping -c 3 flashhost
         ssh fab@flashhost flashhost_list_images
 
@@ -118,6 +119,7 @@ jobs:
       run: |
         tailscale --version
         tailscale status
+        tailscale netcheck
         curl http://flashhost/${{ github.event.inputs.target }}/
 
     - name: "🎭 Run E2E tests"
