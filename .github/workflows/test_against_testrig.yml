@@ -21,7 +21,7 @@ on:
       e2e-branch:
         description: "Branch to run E2E tests from"
         required: false
-        default: 'maintenance'
+        default: 'master'
       run-name:
         description: "Distinct run-name to use"
         required: false
@@ -125,7 +125,7 @@ jobs:
     - name: "🎭 Run E2E tests"
       uses: OctoPrint/actions/e2e@main
       with:
-        ref: maintenance
+        ref: ${{ github.event.inputs.e2e-branch }}
         server: "http://flashhost/${{ github.event.inputs.target }}"
 
     - name: 📷 Check webcam
