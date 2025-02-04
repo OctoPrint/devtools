@@ -27,6 +27,7 @@ import requests
 import webbrowser
 import datetime
 import pkg_resources
+import json
 
 from io import StringIO, BytesIO, TextIOWrapper
 
@@ -689,7 +690,25 @@ def flashhost_remove_image(image, ignore_missing=False):
         return
 
     abort("Image {} does not exist".format(image))
-    
+
+@task
+def flashhost_remote_test_image(image, target=None, e2e_branch=None):
+    """tests the image via the GitHub e2e test workflow, the image may be a URL"""
+
+    github_token = env["github_token"]
+
+    inputs = {"image": image}
+    if target:
+        inputs["target"] = target
+    if e2e_branch:
+        inputs["e2e-branch"] = e2e_branch
+
+    data = {
+        "ref": "main",
+        "inputs": inputs
+    }
+    command = f'curl -L -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer {github_token}" -H "X-GitHub-Api-Version: 2022-11-28" https://api.github.com/repos/OctoPrint/devtools/actions/workflows/test_against_testrig.yml/dispatches -d \'{json.dumps(data)}\''
+    local(command)
 
 
 ##~~ OctoPi ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
