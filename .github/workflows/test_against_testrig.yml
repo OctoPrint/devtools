@@ -58,7 +58,7 @@ jobs:
         oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
         tags: tag:github-runner
 
-    - name: ✔ Check if tailscale is running
+    - name: ✔ Check that connection to flashhost is working
       run: |
         tailscale --version
         tailscale status
@@ -115,7 +115,7 @@ jobs:
         oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
         tags: tag:github-runner
 
-    - name: ✔ Check if tailscale is running and make sure DUT is up
+    - name: ✔ Check that connection to flashhost is working
       run: |
         tailscale --version
         tailscale status

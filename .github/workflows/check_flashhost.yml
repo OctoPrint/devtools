@@ -1,0 +1,37 @@
+name: "Check connection to flashhost"
+
+# Needed secrets:
+# - DEPLOY_KEY: private ssh key to access fab@flashhost.lan
+# - DEPLOY_KNOWN_HOSTS: known hosts including fab@flashhost.lan
+# - TAILSCALE_OAUTH_CLIENT, TAILSCALE_OAUTH_SECRET: OAuth credentials for tailscale
+
+on:
+  schedule:
+    - cron: "7 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  check-tailscale:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "🔑 Install SSH key in agent"
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.DEPLOY_KEY }}
+          known_hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+
+      - name: "🌐 Connect to tailscale network"
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:github-runner
+
+      - name: ✔ Check that connection to flashhost is working
+        run: |
+          tailscale --version
+          tailscale status
+          tailscale netcheck
+          ping -c 3 flashhost
+          ssh fab@flashhost flashhost_list_images
