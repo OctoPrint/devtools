@@ -419,9 +419,7 @@ def flashhost_flash(image, target=None):
     targetdev = disk_device(serial)
 
     sudo(
-        "flock -w600 {} dd bs=4M if={} of={} status=progress conv=fsync".format(
-            lockfile, imagefile, targetdev
-        )
+        f"flock -w600 {lockfile} pv --eta --rate --progress --bytes --width 80 {imagefile} | sudo dd bs=4M of={targetdev}"
     )
 
 
