@@ -518,6 +518,37 @@ def flashhost_provision_firstrun(target, boot):
 
 @task
 @hosts("pi@flashhost.lan")
+def flashhost_mount(target=None):
+    if target is None:
+        target = env.target
+    if target not in env.targets:
+        abort("Uknown target: {}".format(target))
+
+    serial = env.targets[target]["serial"]
+    boot = boot_part_device(serial)
+    mount = "{}/{}".format(env.flashhost["mounts"], target)
+
+    if not files.exists(mount):
+        run("mkdir -p {}".format(mount))
+
+    if not files.exists(mount + "/cmdline.txt"):
+        sudo("mount {} {}".format(boot, mount))
+
+@task 
+@hosts("pi@flashhost.lan")
+def flashhost_umount(target=None):
+    if target is None:
+        target = env.target
+    if target not in env.targets:
+        abort("Unknown target: {}".format(target))
+
+    mount = "{}/{}".format(env.flashhost["mounts"], target)
+
+    sudo("umount {}".format(mount))
+
+
+@task
+@hosts("pi@flashhost.lan")
 def flashhost_provision(target=None, firstrun=True):
     """provisions target with wifi, hostname, password and boot_delay"""
     if target is None:
