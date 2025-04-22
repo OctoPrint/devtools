@@ -63,8 +63,8 @@ jobs:
         tailscale --version
         tailscale status
         tailscale netcheck
-        ping -c 3 flashhost
-        ssh fab@flashhost flashhost_list_images
+        ping -c 3 flashhost.tail9eba.ts.net
+        ssh fab@flashhost.tail9eba.ts.net flashhost_list_images
 
     - name: 🔍 Determine image
       run: |
@@ -74,7 +74,7 @@ jobs:
         then
           URL="$IMAGE"
           IMAGE="github-run-${{ github.run_id }}-${{ github.run_attempt }}"
-          ssh fab@flashhost flashhost_fetch_image:"$URL",$IMAGE
+          ssh fab@flashhost.tail9eba.ts.net flashhost_fetch_image:"$URL",$IMAGE
         fi
 
         echo "Image: $IMAGE"
@@ -85,13 +85,13 @@ jobs:
         TARGET: ${{ github.event.inputs.target }}
         IMAGE: ${{ env.IMAGE }}
       run: |
-        ssh -o SendEnv=TARGET fab@flashhost flashhost_flash_and_provision:$IMAGE octopi_wait:headless=1
+        ssh -o SendEnv=TARGET fab@flashhost.tail9eba.ts.net flashhost_flash_and_provision:$IMAGE octopi_wait:headless=1
 
     - name: "🐙 Preconfigure OctoPrint"
       env:
         TARGET: ${{ github.event.inputs.target }}
       run: |
-        ssh -o SendEnv=TARGET fab@flashhost octopi_test_provisioned:headless=1,config=configs/e2e
+        ssh -o SendEnv=TARGET fab@flashhost.tail9eba.ts.net octopi_test_provisioned:headless=1,config=configs/e2e
 
     - name: "🧹 Clean up if needed"
       if: always()
@@ -99,7 +99,7 @@ jobs:
         IMAGE="${{ env.IMAGE }}"
         if [[ "$IMAGE" == github-run-* ]]
         then
-          ssh fab@flashhost flashhost_remove_image:$IMAGE
+          ssh fab@flashhost.tail9eba.ts.net flashhost_remove_image:$IMAGE
         fi
 
   e2e:
@@ -120,15 +120,15 @@ jobs:
         tailscale --version
         tailscale status
         tailscale netcheck
-        ping -c 3 flashhost
-        curl http://flashhost/${{ github.event.inputs.target }}/
+        ping -c 3 flashhost.tail9eba.ts.net
+        curl http://flashhost.tail9eba.ts.net/${{ github.event.inputs.target }}/
 
     - name: "🎭 Run E2E tests"
       uses: OctoPrint/actions/e2e@main
       with:
         ref: ${{ github.event.inputs.e2e-branch }}
-        server: "http://flashhost/${{ github.event.inputs.target }}"
+        server: "http://flashhost.tail9eba.ts.net/${{ github.event.inputs.target }}"
 
     - name: 📷 Check webcam
       run: |
-        curl -i -o webcam.jpg http://flashhost/${{ github.event.inputs.target }}/webcam/?action=snapshot
+        curl -i -o webcam.jpg http://flashhost.tail9eba.ts.net/${{ github.event.inputs.target }}/webcam/?action=snapshot
