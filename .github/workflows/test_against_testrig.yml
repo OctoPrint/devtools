@@ -120,6 +120,7 @@ jobs:
         tailscale --version
         tailscale status
         tailscale netcheck
+        ping -c 3 flashhost
         curl http://flashhost/${{ github.event.inputs.target }}/
 
     - name: "🎭 Run E2E tests"
