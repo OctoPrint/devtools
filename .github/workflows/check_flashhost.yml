@@ -33,5 +33,5 @@ jobs:
           tailscale --version
           tailscale status
           tailscale netcheck
-          ping -c 3 flashhost
-          ssh fab@flashhost flashhost_list_images
+          ping -c 3 flashhost.tail9eba.ts.net
+          ssh fab@flashhost.tail9eba.ts.net flashhost_list_images
