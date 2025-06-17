@@ -309,10 +309,10 @@ def test_local(tag, python, target="wheel"):
 
     with lcd(env.octoprint):
         if not os.path.exists(os.path.join("dist", "OctoPrint-{}.tar.gz".format(tag))):
-            local("{} setup.py sdist bdist_wheel".format(sys.executable))
+            local("{} -m build".format(sys.executable))
 
     if target == "wheel":
-        installable = "dist/OctoPrint-{}-py2.py3-none-any.whl".format(tag)
+        installable = "dist/OctoPrint-{}-py3-none-any.whl".format(tag)
     elif target == "sdist":
         installable = "dist/OctoPrint-{}.tar.gz".format(tag)
     else:
