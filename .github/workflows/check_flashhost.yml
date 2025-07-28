@@ -27,6 +27,8 @@ jobs:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:github-runner
+          version: latest
+          use-cache: 'true'
 
       - name: ✔ Check that connection to flashhost is working
         run: |
