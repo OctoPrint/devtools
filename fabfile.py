@@ -1,35 +1,31 @@
-from __future__ import print_function, unicode_literals, absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
+import codecs
+import datetime
+import json
+import os
+import sys
+import time
+import webbrowser
+from io import BytesIO, StringIO
+
+import pkg_resources
+import requests
+import yaml
 from fabric.api import (
-    local,
-    lcd,
-    run,
-    sudo,
-    cd,
-    prompt,
     get,
-    put,
     hosts,
+    lcd,
+    local,
+    put,
+    run,
     settings,
+    sudo,
     task,
 )
-from fabric.utils import abort
-from fabric.state import env
 from fabric.contrib import files
-
-import datetime
-import sys
-import os
-import codecs
-import yaml
-import time
-import requests
-import webbrowser
-import datetime
-import pkg_resources
-import json
-
-from io import StringIO, BytesIO, TextIOWrapper
+from fabric.state import env
+from fabric.utils import abort
 
 
 def env_from_yaml(path):
@@ -54,6 +50,18 @@ env.no_keys = True
 env.target = os.environ.get("TARGET", None)
 env.tag = os.environ.get("TAG", None)
 env.rpi_user = os.environ.get("RPI_USER", env.rpi_user)
+
+
+RELEASE_CHANNEL_LOOKUP = {
+    "maintenance": "rc/maintenance",
+    "devel": "rc/devel",
+    "next": "rc/maintenance",
+}
+
+OLD_BRANCH_LOOKUP = {
+    "main": "master",
+    "next": "rc/maintenance",
+}
 
 
 def dict_merge(a, b, leaf_merger=None):
@@ -153,14 +161,7 @@ def get_comparable_version(version_string, cut=None, **kwargs):
 def sync_test_repo(force=False):
     """sync local checkout with testrepo"""
     with lcd(env.octoprint):
-        for branch in (
-            "master",
-            "maintenance",
-            "staging/maintenance",
-            "rc/maintenance",
-            "devel",
-            "rc/devel",
-        ):
+        for branch in ("main", "bugfix", "next", "dev"):
             local("git checkout {}".format(branch))
             if force:
                 local("git push --force releasetest {}".format(branch))
@@ -169,14 +170,9 @@ def sync_test_repo(force=False):
 
 
 @task
-def merge_and_push(branch="master", force=False):
+def merge_and_push(branch="main", force=False):
     with lcd(env.octoprint):
-        for pushbranch in (
-            "rc/maintenance",
-            "rc/devel",
-            "staging/maintenance",
-            "staging/devel",
-        ):
+        for pushbranch in ("next",):
             local("git checkout {}".format(pushbranch))
             local("git merge {}".format(branch))
             if force:
@@ -185,7 +181,9 @@ def merge_and_push(branch="master", force=False):
                 local("git push")
 
 
-def test_branch(release_branch, prep_branch, dev_branch, tag=None, force=False):
+@task
+def test_next(tag=None, force=False):
+    """prep next on testrepo"""
     if tag is None:
         tag = env.tag
 
@@ -193,28 +191,16 @@ def test_branch(release_branch, prep_branch, dev_branch, tag=None, force=False):
         abort("Tag needs to be set")
 
     if tag.endswith("rc1"):
-        merge_tag_push_test_repo(release_branch, dev_branch, tag, force=force)
+        # first RC? merge from dev first, then tag
+        merge_tag_push_test_repo("next", "dev", tag, force=force)
     else:
-        merge_tag_push_test_repo(release_branch, prep_branch, tag, force=force)
-
-
-@task
-def test_rc_devel(tag=None, force=False):
-    """prep devel rc on testrepo (from staging/devel)"""
-    test_branch("rc/devel", "staging/devel", "devel", tag=tag, force=force)
-
-
-@task
-def test_rc_maintenance(tag=None, force=False):
-    """prep maintenance rc on testrepo (from staging/maintenance)"""
-    test_branch(
-        "rc/maintenance", "staging/maintenance", "maintenance", tag=tag, force=force
-    )
+        # any subsequent RCs just get tagged
+        tag_push_test_repo("next", tag, force=force)
 
 
 @task
 def test_stable(tag=None, force=False):
-    """prep stable release on testrepo (from staging/maintenance)"""
+    """prep stable release on testrepo (from next)"""
 
     if tag is None:
         tag = env.tag
@@ -222,12 +208,12 @@ def test_stable(tag=None, force=False):
     if tag is None:
         abort("Tag needs to be set")
 
-    merge_tag_push_test_repo("master", "staging/maintenance", tag, force=force)
+    merge_tag_push_test_repo("main", "next", tag, force=force)
 
 
 @task
 def test_bugfix(tag=None, force=False):
-    """prep bugfix release on testrepo (from staging/bugfix)"""
+    """prep bugfix release on testrepo (from bugfix)"""
 
     if tag is None:
         tag = env.tag
@@ -235,7 +221,7 @@ def test_bugfix(tag=None, force=False):
     if tag is None:
         abort("Tag needs to be set")
 
-    merge_tag_push_test_repo("master", "staging/bugfix", tag, force=force)
+    merge_tag_push_test_repo("main", "bugfix", tag, force=force)
 
 
 def merge_tag_push_test_repo(push_branch, merge_branch, tag=None, force=False):
@@ -257,6 +243,26 @@ def merge_tag_push_test_repo(push_branch, merge_branch, tag=None, force=False):
 
         local("git push releasetest {}".format(push_branch))
         local("git push --tags releasetest {}".format(tag))
+
+
+def tag_push_test_repo(tag_branch, tag=None, force=False):
+    # tag and push to testrepo
+    if tag is None:
+        tag = env.tag
+
+    if tag is None:
+        abort("Tag needs to be set")
+
+    with lcd(env.octoprint):
+        local("git fetch --tags -f releasetest")
+        local("git checkout {}".format(tag_branch))
+
+        if force:
+            local("git tag -d {}".format(tag))
+        local("git tag {}".format(tag))
+
+        local("git push releasetest {}".format(tag_branch))
+        local("git push --tags releasetest")
 
 
 def merge_push_test_repo(push_branch, merge_branch):
@@ -424,10 +430,12 @@ def flashhost_flash(image, target=None):
 
 
 def encrypt_psk(ssid, psk):
-    from hashlib import pbkdf2_hmac
     from binascii import hexlify
+    from hashlib import pbkdf2_hmac
 
-    return hexlify(pbkdf2_hmac("sha1", str.encode(psk), str.encode(ssid), 4096, 32)).decode("utf-8")
+    return hexlify(
+        pbkdf2_hmac("sha1", str.encode(psk), str.encode(ssid), 4096, 32)
+    ).decode("utf-8")
 
 
 def flashhost_provision_octopi(target, boot):
@@ -532,7 +540,8 @@ def flashhost_mount(target=None):
     if not files.exists(mount + "/cmdline.txt"):
         sudo("mount {} {}".format(boot, mount))
 
-@task 
+
+@task
 @hosts("pi@flashhost.lan")
 def flashhost_umount(target=None):
     if target is None:
@@ -709,7 +718,7 @@ def flashhost_remove_image(image, ignore_missing=False):
     if files.exists(imagepath):
         run("rm {}".format(imagepath))
         return
-    
+
     imagepath = "{}/octopi-{}.img".format(path, image)
     if files.exists(imagepath):
         run("rm {}".format(imagepath))
@@ -719,6 +728,7 @@ def flashhost_remove_image(image, ignore_missing=False):
         return
 
     abort("Image {} does not exist".format(image))
+
 
 @task
 def flashhost_remote_test_image(image, target=None, e2e_branch=None):
@@ -732,10 +742,7 @@ def flashhost_remote_test_image(image, target=None, e2e_branch=None):
     if e2e_branch:
         inputs["e2e-branch"] = e2e_branch
 
-    data = {
-        "ref": "main",
-        "inputs": inputs
-    }
+    data = {"ref": "main", "inputs": inputs}
     command = f'curl -L -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer {github_token}" -H "X-GitHub-Api-Version: 2022-11-28" https://api.github.com/repos/OctoPrint/devtools/actions/workflows/test_against_testrig.yml/dispatches -d \'{json.dumps(data)}\''
     local(command)
 
@@ -744,7 +751,14 @@ def flashhost_remote_test_image(image, target=None, e2e_branch=None):
 
 
 def release_patch(
-    key, tag, repo, additional_repos=None, branch="master", prerelease=False, pip=None
+    key,
+    tag,
+    repo,
+    additional_repos=None,
+    branch="main",
+    additional_branches=None,
+    prerelease=False,
+    pip=None,
 ):
     # generate release patch
     now = datetime.datetime.utcnow().replace(microsecond=0).isoformat(" ")
@@ -755,28 +769,33 @@ def release_patch(
     if additional_repos is None:
         additional_repos = []
 
+    if additional_branches is None:
+        additional_branches = []
+
     checks = dict()
     if pip is not None:
         checks[key] = dict(pip=pip)
 
-    release = dict(
-        draft=False,
-        html_url="https://github.com/{}/releases/tag/{}".format(repo, tag),
-        name=tag_name,
-        prerelease=prerelease,
-        published_at=now,
-        tag_name=tag,
-        target_commitish=branch,
-    )
+    repo_releases = []
+    for b in [
+        branch,
+    ] + additional_branches:
+        repo_releases.append(
+            {
+                "draft": False,
+                "html_url": "https://github.com/{}/releases/tag/{}".format(repo, tag),
+                "name": tag_name,
+                "prerelease": prerelease,
+                "published_at": now,
+                "tag_name": tag,
+                "target_commitish": b,
+            }
+        )
 
     releases = dict()
-    releases[repo] = [
-        release,
-    ]
+    releases[repo] = repo_releases
     for repo in additional_repos:
-        releases[repo] = [
-            release,
-        ]
+        releases[repo] = repo_releases
 
     config = dict(
         plugins=dict(
@@ -789,6 +808,10 @@ def release_patch(
 
 
 def release_patch_octoprint(tag, branch, prerelease):
+    old_branches = None
+    if branch in OLD_BRANCH_LOOKUP:
+        old_branches = [OLD_BRANCH_LOOKUP[branch]]
+
     return release_patch(
         "octoprint",
         tag,
@@ -797,6 +820,7 @@ def release_patch_octoprint(tag, branch, prerelease):
             "foosel/OctoPrint",
         ],
         branch=branch,
+        additional_branches=old_branches,
         prerelease=prerelease,
         pip="{}/archive/{{target_version}}.zip".format(env.releasetest_repo),
     )
@@ -1021,7 +1045,7 @@ def octopi_provision(
         for fix in fixes.split("|"):
             octopi_curl_plugin(fix)
 
-    with codecs.open(
+    with open(
         os.path.join(config, "config.yaml"),
         mode="r",
         encoding="utf-8",
@@ -1030,31 +1054,34 @@ def octopi_provision(
         new_config = yaml.safe_load(f)
 
     if release_channel is not None:
-        if release_channel in ("maintenance", "devel"):
-            release_config = dict(
-                plugins=dict(
-                    softwareupdate=dict(
-                        checks=dict(
-                            octoprint=dict(
-                                prerelease=True,
-                                prerelease_channel="rc/{}".format(release_channel),
-                            )
-                        )
-                    )
-                )
-            )
+        if release_channel in RELEASE_CHANNEL_LOOKUP.keys():
+            release_config = {
+                "plugins": {
+                    "softwareupdate": {
+                        "checks": {
+                            "octoprint": {
+                                "prerelease": True,
+                                "prerelease_channel": RELEASE_CHANNEL_LOOKUP[
+                                    release_channel
+                                ],
+                            }
+                        }
+                    }
+                }
+            }
         else:
-            release_config = dict(
-                plugins=dict(
-                    softwareupdate=dict(
-                        checks=dict(
-                            octoprint=dict(
-                                prerelease=False, prerelease_channel="stable"
-                            )
-                        )
-                    )
-                )
-            )
+            release_config = {
+                "plugins": {
+                    "softwareupdate": {
+                        "checks": {
+                            "octoprint": {
+                                "prerelease": False,
+                                "prerelease_channel": "stable",
+                            }
+                        }
+                    }
+                }
+            }
 
         new_config = dict_merge(new_config, release_config)
 
@@ -1317,7 +1344,7 @@ def octopi_test_firmwarecheck(tag, target=None, headless=False):
 
 
 @task
-def octopi_test_update_devel(
+def octopi_test_update_rc(
     channel,
     tag=None,
     version=None,
@@ -1328,38 +1355,10 @@ def octopi_test_update_devel(
     target=None,
     headless=False,
 ):
-    """tests update procedure for devel RCs"""
+    """tests update procedure for RCs"""
     octopi_test_update(
         channel,
-        "rc/devel",
-        version=version,
-        tag=tag,
-        prerelease=True,
-        config=config,
-        target=target,
-        pip=pip,
-        packages=packages,
-        fixes=fixes,
-        headless=headless,
-    )
-
-
-@task
-def octopi_test_update_maintenance(
-    channel,
-    tag=None,
-    version=None,
-    pip=None,
-    packages=None,
-    fixes=None,
-    config="configs/with_acl",
-    target=None,
-    headless=False,
-):
-    """tests update procedure for maintenance RCs"""
-    octopi_test_update(
-        channel,
-        "rc/maintenance",
+        "next",
         version=version,
         tag=tag,
         prerelease=True,

@@ -13,15 +13,15 @@ on:
       target:
         description: "Target DUT to deploy to"
         required: true
-        default: 'pic'
+        default: "pic"
       image:
         description: "Image to deploy"
         required: false
-        default: '1.0.0-latest'
+        default: "1.0.0-latest"
       e2e-branch:
         description: "Branch to run E2E tests from"
         required: false
-        default: 'master'
+        default: "main"
       run-name:
         description: "Distinct run-name to use"
         required: false
@@ -35,108 +35,107 @@ jobs:
       image: ${{ env.IMAGE }}
 
     steps:
-    - name: "🧥 Cloak some stuff"
-      env:
-        TESTRIG_WIFI_NAME: ${{ secrets.TESTRIG_WIFI_NAME }}
-        TESTRIG_WIFI_KEY: ${{ secrets.TESTRIG_WIFI_KEY }}
-        TESTRIG_WIFI_ENCKEY: ${{ secrets.TESTRIG_WIFI_ENCKEY }}
-      run: |
-        echo "::add-mask::$TESTRIG_WIFI_NAME"
-        echo "::add-mask::$TESTRIG_WIFI_KEY"
-        echo "::add-mask::$TESTRIG_WIFI_ENCKEY"
+      - name: "🧥 Cloak some stuff"
+        env:
+          TESTRIG_WIFI_NAME: ${{ secrets.TESTRIG_WIFI_NAME }}
+          TESTRIG_WIFI_KEY: ${{ secrets.TESTRIG_WIFI_KEY }}
+          TESTRIG_WIFI_ENCKEY: ${{ secrets.TESTRIG_WIFI_ENCKEY }}
+        run: |
+          echo "::add-mask::$TESTRIG_WIFI_NAME"
+          echo "::add-mask::$TESTRIG_WIFI_KEY"
+          echo "::add-mask::$TESTRIG_WIFI_ENCKEY"
 
-    - name: "🔑 Install SSH key in agent"
-      uses: shimataro/ssh-key-action@v2
-      with:
-        key: ${{ secrets.DEPLOY_KEY }}
-        known_hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      - name: "🔑 Install SSH key in agent"
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.DEPLOY_KEY }}
+          known_hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
 
-    - name: "🌐 Connect to tailscale network"
-      uses: tailscale/github-action@v3
-      with:
-        oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT }}
-        oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
-        tags: tag:github-runner
-        version: latest
-        use-cache: 'true'
+      - name: "🌐 Connect to tailscale network"
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:github-runner
+          version: latest
+          use-cache: "true"
 
-    - name: ✔ Check that connection to flashhost is working
-      run: |
-        tailscale --version
-        tailscale status
-        tailscale netcheck
-        tailscale ping flashhost.tail9eba.ts.net
-        tailscale ping --icmp flashhost.tail9eba.ts.net
-        ping -c 3 flashhost.tail9eba.ts.net
-        ssh fab@flashhost.tail9eba.ts.net flashhost_list_images
+      - name: ✔ Check that connection to flashhost is working
+        run: |
+          tailscale --version
+          tailscale status
+          tailscale netcheck
+          tailscale ping flashhost.tail9eba.ts.net
+          tailscale ping --icmp flashhost.tail9eba.ts.net
+          ping -c 3 flashhost.tail9eba.ts.net
+          ssh fab@flashhost.tail9eba.ts.net flashhost_list_images
 
-    - name: 🔍 Determine image
-      run: |
-        IMAGE=${{ github.event.inputs.image }}
+      - name: 🔍 Determine image
+        run: |
+          IMAGE=${{ github.event.inputs.image }}
 
-        if [[ "$IMAGE" == https://* ]] || [[ $IMAGE == http://* ]]
-        then
-          URL="$IMAGE"
-          IMAGE="github-run-${{ github.run_id }}-${{ github.run_attempt }}"
-          ssh fab@flashhost.tail9eba.ts.net flashhost_fetch_image:"$URL",$IMAGE
-        fi
+          if [[ "$IMAGE" == https://* ]] || [[ $IMAGE == http://* ]]
+          then
+            URL="$IMAGE"
+            IMAGE="github-run-${{ github.run_id }}-${{ github.run_attempt }}"
+            ssh fab@flashhost.tail9eba.ts.net flashhost_fetch_image:"$URL",$IMAGE
+          fi
 
-        echo "Image: $IMAGE"
-        echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+          echo "Image: $IMAGE"
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
-    - name: "🔥 Flash & provision image"
-      env:
-        TARGET: ${{ github.event.inputs.target }}
-        IMAGE: ${{ env.IMAGE }}
-      run: |
-        ssh -o SendEnv=TARGET fab@flashhost.tail9eba.ts.net flashhost_flash_and_provision:$IMAGE octopi_wait:headless=1
+      - name: "🔥 Flash & provision image"
+        env:
+          TARGET: ${{ github.event.inputs.target }}
+          IMAGE: ${{ env.IMAGE }}
+        run: |
+          ssh -o SendEnv=TARGET fab@flashhost.tail9eba.ts.net flashhost_flash_and_provision:$IMAGE octopi_wait:headless=1
 
-    - name: "🐙 Preconfigure OctoPrint"
-      env:
-        TARGET: ${{ github.event.inputs.target }}
-      run: |
-        ssh -o SendEnv=TARGET fab@flashhost.tail9eba.ts.net octopi_test_provisioned:headless=1,config=configs/e2e
+      - name: "🐙 Preconfigure OctoPrint"
+        env:
+          TARGET: ${{ github.event.inputs.target }}
+        run: |
+          ssh -o SendEnv=TARGET fab@flashhost.tail9eba.ts.net octopi_test_provisioned:headless=1,config=configs/e2e
 
-    - name: "🧹 Clean up if needed"
-      if: always()
-      run: |
-        IMAGE="${{ env.IMAGE }}"
-        if [[ "$IMAGE" == github-run-* ]]
-        then
-          ssh fab@flashhost.tail9eba.ts.net flashhost_remove_image:$IMAGE
-        fi
+      - name: "🧹 Clean up if needed"
+        if: always()
+        run: |
+          IMAGE="${{ env.IMAGE }}"
+          if [[ "$IMAGE" == github-run-* ]]
+          then
+            ssh fab@flashhost.tail9eba.ts.net flashhost_remove_image:$IMAGE
+          fi
 
   e2e:
     name: "🧪 E2E"
     runs-on: ubuntu-latest
     needs: deploy
     steps:
+      - name: "🌐 Connect to tailscale network"
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:github-runner
+          version: latest
+          use-cache: "true"
 
-    - name: "🌐 Connect to tailscale network"
-      uses: tailscale/github-action@v3
-      with:
-        oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT }}
-        oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
-        tags: tag:github-runner
-        version: latest
-        use-cache: 'true'
+      - name: ✔ Check that connection to flashhost is working
+        run: |
+          tailscale --version
+          tailscale status
+          tailscale netcheck
+          tailscale ping flashhost.tail9eba.ts.net
+          tailscale ping --icmp flashhost.tail9eba.ts.net
+          ping -c 3 flashhost.tail9eba.ts.net
+          curl http://flashhost.tail9eba.ts.net/${{ github.event.inputs.target }}/
 
-    - name: ✔ Check that connection to flashhost is working
-      run: |
-        tailscale --version
-        tailscale status
-        tailscale netcheck
-        tailscale ping flashhost.tail9eba.ts.net
-        tailscale ping --icmp flashhost.tail9eba.ts.net
-        ping -c 3 flashhost.tail9eba.ts.net
-        curl http://flashhost.tail9eba.ts.net/${{ github.event.inputs.target }}/
+      - name: "🎭 Run E2E tests"
+        uses: OctoPrint/actions/e2e@main
+        with:
+          ref: ${{ github.event.inputs.e2e-branch }}
+          server: "http://flashhost.tail9eba.ts.net/${{ github.event.inputs.target }}"
 
-    - name: "🎭 Run E2E tests"
-      uses: OctoPrint/actions/e2e@main
-      with:
-        ref: ${{ github.event.inputs.e2e-branch }}
-        server: "http://flashhost.tail9eba.ts.net/${{ github.event.inputs.target }}"
-
-    - name: 📷 Check webcam
-      run: |
-        curl -i -o webcam.jpg http://flashhost.tail9eba.ts.net/${{ github.event.inputs.target }}/webcam/?action=snapshot
+      - name: 📷 Check webcam
+        run: |
+          curl -i -o webcam.jpg http://flashhost.tail9eba.ts.net/${{ github.event.inputs.target }}/webcam/?action=snapshot

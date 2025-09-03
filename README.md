@@ -11,13 +11,13 @@ It is recommended to create terminals for each DUT, and set `TARGET` (= DUT iden
     export TAG=1.4.1rc3
     export TARGET=pi3
 
-### Pre-release maintenance RC on test repo (test prep)
+### Pre-release RC on test repo (test prep)
 
-    fab sync_test_repo test_rc_maintenance:1.4.1rc3
+    fab sync_test_repo test_rc:1.4.1rc3
 
 or (with `TAG` set)
 
-    fab sync_test_repo test_rc_maintenance
+    fab sync_test_repo test_rc
 
 ### Local test install
 
@@ -37,22 +37,22 @@ or (with `TARGET` set)
 
     fab flashhost_flash_and_provision:0.17.0
 
-### Test update for maintenance RC
+### Test update for RC
 
-Target pi3, release channel maintenance, start version 1.4.1rc2, fake release 1.4.1rc3
+Target pi3, release channel `next`, start version 1.4.1rc2, fake release 1.4.1rc3
 
-    fab --set target=pi3 octopi_test_update_maintenance:maintenance,1.4.1rc3,version=1.4.1rc2
+    fab --set target=pi3 octopi_test_update_rc:next,1.4.1rc3,version=1.4.1rc2
 
 or (with `TARGET` and `TAG` set)
 
-    fab octopi_test_update_maintenance:maintenance,version=1.4.1rc2
+    fab octopi_test_update_rc:next,version=1.4.1rc2
 
 ### Combined
 
-Target pi3, OctoPi 0.17.0, release channel maintenance, start version 1.4.1rc2, fake release 1.4.1rc3 (`TARGET`
+Target pi3, OctoPi 0.17.0, release channel `next`, start version 1.4.1rc2, fake release 1.4.1rc3 (`TARGET`
 and `TAG` set)
 
-    fab flashhost_flash_and_provision:0.17.0 octopi_test_update_maintenance:maintenance,version=1.4.1rc2
+    fab flashhost_flash_and_provision:0.17.0 octopi_test_update_rc:next,version=1.4.1rc2
 
 ### Full example
 
@@ -63,16 +63,16 @@ start version combinations.
     export TARGET=pi3
     export TAG=1.4.1rc4
     fab sync_test_repo
-    fab test_rc_maintenance
+    fab test_next
     fab test_sdist:python27
     fab test_wheel:python37
-    fab flashhost_flash_and_provision:0.15.0 octopi_test_update_maintenance:stable,version=1.4.0
+    fab flashhost_flash_and_provision:0.15.0 octopi_test_update_rc:stable,version=1.4.0
     fab flashhost_flash_and_provision:0.15.1 octopi_test_simplepip
-    fab flashhost_flash_and_provision:0.15.1 octopi_test_update_maintenance:maintenance,version=1.4.1rc3
-    fab flashhost_flash_and_provision:0.16.0 octopi_test_update_maintenance:maintenance
-    fab flashhost_flash_and_provision:0.17.0 octopi_test_update_maintenance:maintenance
-    fab flashhost_flash_and_provision:0.17.0 octopi_test_update_maintenance:maintenance,version=1.4.1rc3
-    fab flashhost_flash_and_provision:0.17.0 octopi_test_update_maintenance:devel
+    fab flashhost_flash_and_provision:0.15.1 octopi_test_update_rc:next,version=1.4.1rc3
+    fab flashhost_flash_and_provision:0.16.0 octopi_test_update_rc:next
+    fab flashhost_flash_and_provision:0.17.0 octopi_test_update_rc:next
+    fab flashhost_flash_and_provision:0.17.0 octopi_test_update_rc:next,version=1.4.1rc3
+    fab flashhost_flash_and_provision:0.17.0 octopi_test_update_rc:devel
 
 ## Testrig
 
