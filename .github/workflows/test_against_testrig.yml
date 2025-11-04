@@ -40,10 +40,12 @@ jobs:
           TESTRIG_WIFI_NAME: ${{ secrets.TESTRIG_WIFI_NAME }}
           TESTRIG_WIFI_KEY: ${{ secrets.TESTRIG_WIFI_KEY }}
           TESTRIG_WIFI_ENCKEY: ${{ secrets.TESTRIG_WIFI_ENCKEY }}
+          TESTRIG_EXTERNAL: ${{ secrets.TESTRIG_EXTERNAL }}
         run: |
           echo "::add-mask::$TESTRIG_WIFI_NAME"
           echo "::add-mask::$TESTRIG_WIFI_KEY"
           echo "::add-mask::$TESTRIG_WIFI_ENCKEY"
+          echo "::add-mask::$TESTRIG_EXTERNAL"
 
       - name: "🔑 Install SSH key in agent"
         uses: shimataro/ssh-key-action@v2
@@ -112,6 +114,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     steps:
+      - name: "🧥 Cloak some stuff"
+        env:
+          TESTRIG_EXTERNAL: ${{ secrets.TESTRIG_EXTERNAL }}
+        run: |
+          echo "::add-mask::$TESTRIG_EXTERNAL"
+
       - name: "🌐 Connect to tailscale network"
         uses: tailscale/github-action@v4
         with:

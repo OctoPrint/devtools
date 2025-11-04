@@ -15,6 +15,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: "🧥 Cloak some stuff"
+        env:
+          TESTRIG_EXTERNAL: ${{ secrets.TESTRIG_EXTERNAL }}
+        run: |
+          echo "::add-mask::$TESTRIG_EXTERNAL"
+
       - name: "🔑 Install SSH key in agent"
         uses: shimataro/ssh-key-action@v2
         with:
