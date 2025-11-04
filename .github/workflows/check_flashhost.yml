@@ -28,14 +28,15 @@ jobs:
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:github-runner
           version: latest
-          use-cache: 'true'
+          use-cache: "true"
+          ping: flashhost.tail9eba.ts.net
 
       - name: ✔ Check that connection to flashhost is working
         run: |
           tailscale --version
           tailscale status
           tailscale netcheck
-          tailscale ping flashhost.tail9eba.ts.net
-          tailscale ping --icmp flashhost.tail9eba.ts.net
+          #tailscale ping flashhost.tail9eba.ts.net
+          #tailscale ping --icmp flashhost.tail9eba.ts.net
           ping -c 3 flashhost.tail9eba.ts.net
           ssh fab@flashhost.tail9eba.ts.net flashhost_list_images
