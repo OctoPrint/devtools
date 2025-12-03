@@ -398,7 +398,7 @@ def print_file(path):
 
 
 @task
-@hosts("pi@flashhost.lan")
+@hosts("pi@flashhost.octo")
 def flashhost_release_lock():
     """release flash lock if left set for some reason"""
     lock = env.flashhost["flashlock"]
@@ -406,7 +406,7 @@ def flashhost_release_lock():
 
 
 @task
-@hosts("pi@flashhost.lan")
+@hosts("pi@flashhost.octo")
 def flashhost_flash(image, target=None):
     """flashes target with OctoPi image of provided image using dd"""
     lockfile = env.flashhost["flashlock"]
@@ -523,7 +523,7 @@ def flashhost_provision_firstrun(target, boot):
 
 
 @task
-@hosts("pi@flashhost.lan")
+@hosts("pi@flashhost.octo")
 def flashhost_mount(target=None):
     if target is None:
         target = env.target
@@ -542,7 +542,7 @@ def flashhost_mount(target=None):
 
 
 @task
-@hosts("pi@flashhost.lan")
+@hosts("pi@flashhost.octo")
 def flashhost_umount(target=None):
     if target is None:
         target = env.target
@@ -555,7 +555,7 @@ def flashhost_umount(target=None):
 
 
 @task
-@hosts("pi@flashhost.lan")
+@hosts("pi@flashhost.octo")
 def flashhost_provision(target=None, firstrun=True):
     """provisions target with wifi, hostname, password and boot_delay"""
     if target is None:
@@ -583,7 +583,7 @@ def flashhost_provision(target=None, firstrun=True):
 
 
 @task
-@hosts("pi@flashhost.lan")
+@hosts("pi@flashhost.octo")
 def flashhost_host(target=None):
     """switches target to Host mode (powered off & USB-SD-MUX Host)"""
     if target is None:
@@ -605,7 +605,7 @@ def flashhost_host(target=None):
 
 
 @task
-@hosts("pi@flashhost.lan")
+@hosts("pi@flashhost.octo")
 def flashhost_dut(target=None):
     """switches target to DUT mode (USB-SD-MUX DUT & powered on)"""
     if target is None:
@@ -628,7 +628,7 @@ def flashhost_dut(target=None):
 
 
 @task
-@hosts("pi@flashhost.lan")
+@hosts("pi@flashhost.octo")
 def flashhost_dutstate(target=None):
     """switches target to DUT mode (USB-SD-MUX DUT & powered on)"""
     if target is None:
@@ -641,7 +641,7 @@ def flashhost_dutstate(target=None):
 
 
 @task
-@hosts("pi@flashhost.lan")
+@hosts("pi@flashhost.octo")
 def flashhost_reboot(target=None):
     """powers target off and on again"""
     if target is None:
@@ -658,7 +658,7 @@ def flashhost_reboot(target=None):
 
 
 @task
-@hosts("pi@flashhost.lan")
+@hosts("pi@flashhost.octo")
 def flashhost_flash_and_provision(version, target=None, firstrun=True):
     """runs flash & provision cycle on target for specified OctoPi version"""
     if target is None:
@@ -673,7 +673,7 @@ def flashhost_flash_and_provision(version, target=None, firstrun=True):
 
 
 @task
-@hosts("pi@flashhost.lan")
+@hosts("pi@flashhost.octo")
 def flashhost_list_images():
     path = env.flashhost["images"]
     print("Available images:")
@@ -689,7 +689,7 @@ def flashhost_list_images():
 
 
 @task
-@hosts("pi@flashhost.lan")
+@hosts("pi@flashhost.octo")
 def flashhost_fetch_image(url, image):
     """downloads image from url to flashhost images directory"""
     path = env.flashhost["images"]
@@ -709,7 +709,7 @@ def flashhost_fetch_image(url, image):
 
 
 @task
-@hosts("pi@flashhost.lan")
+@hosts("pi@flashhost.octo")
 def flashhost_remove_image(image, ignore_missing=False):
     """removes image from flashhost images directory"""
     path = env.flashhost["images"]
