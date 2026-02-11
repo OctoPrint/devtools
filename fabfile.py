@@ -12,17 +12,7 @@ from io import BytesIO, StringIO
 import pkg_resources
 import requests
 import yaml
-from fabric.api import (
-    get,
-    hosts,
-    lcd,
-    local,
-    put,
-    run,
-    settings,
-    sudo,
-    task,
-)
+from fabric.api import get, hosts, lcd, local, put, run, settings, sudo, task
 from fabric.contrib import files
 from fabric.state import env
 from fabric.utils import abort
@@ -413,6 +403,7 @@ def flashhost_flash(image, target=None):
 
     imagefile = "{}/{}.img".format(env.flashhost["images"], image)
     if not files.exists(imagefile):
+        print("Could not find {}, trying with 'octopi-' prefix".format(imagefile))
         imagefile = "{}/octopi-{}.img".format(env.flashhost["images"], image)
 
     if target is None:
@@ -528,7 +519,7 @@ def flashhost_mount(target=None):
     if target is None:
         target = env.target
     if target not in env.targets:
-        abort("Uknown target: {}".format(target))
+        abort("Unknown target: {}".format(target))
 
     serial = env.targets[target]["serial"]
     boot = boot_part_device(serial)
@@ -578,7 +569,16 @@ def flashhost_provision(target=None, firstrun=True):
     else:
         flashhost_provision_octopi(target, mount)
 
-    files.append(mount + "/config.txt", "boot_delay=3", use_sudo=True)
+    files.append(
+        mount + "/config.txt",
+        "disable_poe_fan=1\nboot_delay=3\nenable_uart=1",
+        use_sudo=True,
+    )
+
+    if not files.exists(mount + "/octopi.txt"):
+        # not an octopi image, make sure to manually enable ssh
+        sudo("touch {}/ssh".format(mount))
+
     sudo("umount {}".format(mount))
 
 
