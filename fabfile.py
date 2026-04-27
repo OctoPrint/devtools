@@ -304,13 +304,15 @@ def test_local(tag, python, target="wheel"):
         abort("Tag needs to be set")
 
     with lcd(env.octoprint):
-        if not os.path.exists(os.path.join("dist", "OctoPrint-{}.tar.gz".format(tag))):
-            local("{} -m build".format(sys.executable))
+        if not os.path.exists(
+            os.path.join(env.octoprint, "dist", "octoprint-{}.tar.gz".format(tag))
+        ):
+            local("{} -m build".format(getattr(env, "pythonbuild")))
 
     if target == "wheel":
-        installable = "dist/OctoPrint-{}-py3-none-any.whl".format(tag)
+        installable = "dist/octoprint-{}-py3-none-any.whl".format(tag)
     elif target == "sdist":
-        installable = "dist/OctoPrint-{}.tar.gz".format(tag)
+        installable = "dist/octoprint-{}.tar.gz".format(tag)
     else:
         abort("Unknown target {}".format(target))
         return
